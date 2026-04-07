@@ -1,0 +1,11 @@
+{% load widget_tweaks %}
+
+{% for field in form %}
+<div class="row mb-2">
+    {{ field.errors }}
+    <label class="col-sm-3 col-form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+    <div class="col-sm-9">
+        {{ field | add_class:"form-control" }}
+    </div>
+</div>
+{% endfor %}

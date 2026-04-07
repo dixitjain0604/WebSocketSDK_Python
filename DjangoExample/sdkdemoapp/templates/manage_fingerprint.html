@@ -1,0 +1,46 @@
+{% extends "master.html" %}
+{% load static %}
+
+{% block title %}Fingerprint Data Management{% endblock %}
+
+{% block content %}
+<p>
+    {% include 'navbar_control_device.html' %} /
+    <a href="{{ request.path }}">Fingerprint Data Management</a>
+</p>
+
+<script src="{% static 'js/binary_data_editor.js' %}"></script>
+
+<div class="text-center">
+    <h1 class="display-4">Fingerprint Data Management</h1>
+</div>
+
+<hr />
+
+<div class="row">
+    <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+            <button type="submit" name="action_read" class="btn btn-outline-primary">Get Fingerprint</button>
+            <button type="submit" name="action_write" class="btn btn-outline-primary">Set Fingerprint</button>
+            <button type="submit" name="action_delete" class="btn btn-outline-danger">Delete Fingerprint</button>
+        </div>
+
+        {% if model.info_msg is not None %}
+        <div class="mb-3">
+            <div class="alert alert-info">{{ model.info_msg }}</div>
+        </div>
+        {% endif %}
+        {% if model.error_msg is not None %}
+        <div class="mb-3">
+            <div class="alert alert-danger">{{ model.error_msg }}</div>
+        </div>
+        {% endif %}
+
+        {{ form }}
+    </form>
+</div>
+
+<hr />
+
+{% endblock %}

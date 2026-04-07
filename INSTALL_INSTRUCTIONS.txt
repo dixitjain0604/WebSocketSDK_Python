@@ -1,0 +1,126 @@
+============================================================
+  HOW TO INSTALL THE SYNC USERS FEATURE
+  Step-by-step instructions
+============================================================
+
+You need to do 4 things:
+  1. Add a new file:  sync_users_biz.py  (the sync logic)
+  2. Add a new file:  sync_users.html    (the web page)
+  3. Edit views.py    (add the new view function)
+  4. Edit urls.py     (add the new URL route)
+  5. Edit master.html (add "Sync Users" to the navbar)
+
+============================================================
+STEP 1: Copy sync_users_biz.py
+============================================================
+
+Copy the file "sync_users_biz.py" to:
+
+  DjangoExample/sdkdemoapp/biz/sync_users.py
+
+NOTE: Rename it from sync_users_biz.py to sync_users.py
+
+
+============================================================
+STEP 2: Copy sync_users.html
+============================================================
+
+Copy the file "sync_users.html" to:
+
+  DjangoExample/sdkdemoapp/templates/sync_users.html
+
+
+============================================================
+STEP 3: Edit views.py — ADD this at the bottom of the file
+============================================================
+
+Open: DjangoExample/sdkdemoapp/views.py
+
+Add this IMPORT at the top (with the other imports):
+
+    from .biz import sync_users as sync_users_biz
+
+Add this VIEW FUNCTION at the bottom of the file:
+
+    def sync_users(request: HttpRequest):
+        template = loader.get_template('sync_users.html')
+        
+        devices = sync_users_biz.get_devices_with_status()
+        
+        context = {
+            "devices": devices,
+            "error_msg": None,
+            "success_msg": None,
+            "info_msg": None,
+            "sync_log": None,
+        }
+        
+        if request.method == "POST":
+            action = request.POST.get("action", "")
+            
+            if action == "sync_all":
+                # Sync all online devices
+                device_list = [(d.device_id, d.connection_id) for d in devices]
+                if len(device_list) < 2:
+                    context["error_msg"] = "Need at least 2 online devices to sync."
+                else:
+                    log = sync_users_biz.run_sync(device_list)
+                    context["sync_log"] = log
+                    context["success_msg"] = "Sync completed across all devices. See log below."
+                    # Refresh device status
+                    context["devices"] = sync_users_biz.get_devices_with_status()
+            
+            elif action == "sync_selected":
+                # Sync only selected devices
+                selected = request.POST.getlist("selected_devices")
+                device_list = []
+                for item in selected:
+                    parts = item.split(":")
+                    if len(parts) == 2:
+                        device_list.append((parts[0], int(parts[1])))
+                
+                if len(device_list) < 2:
+                    context["error_msg"] = "Please select at least 2 devices to sync."
+                else:
+                    log = sync_users_biz.run_sync(device_list)
+                    context["sync_log"] = log
+                    context["success_msg"] = f"Sync completed across {len(device_list)} selected devices. See log below."
+                    # Refresh device status
+                    context["devices"] = sync_users_biz.get_devices_with_status()
+        
+        return HttpResponse(template.render(context, request))
+
+
+============================================================
+STEP 4: Edit urls.py — ADD this URL route
+============================================================
+
+Open: DjangoExample/sdkdemoapp/urls.py
+
+Add this line inside urlpatterns list (after the
+"online_devices" line is a good place):
+
+    path("sync_users", views.sync_users, name="sync_users"),
+
+
+============================================================
+STEP 5: Edit master.html — ADD navbar link
+============================================================
+
+Open: DjangoExample/sdkdemoapp/templates/master.html
+
+Find this block:
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" href="{% url 'online_devices' %}">Online Devices</a>
+                        </li>
+
+Add this RIGHT AFTER it:
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" href="{% url 'sync_users' %}">Sync Users</a>
+                        </li>
+
+
+============================================================
+DONE! Restart Django and visit:
+  http://127.0.0.1:8000/sync_users
+============================================================

@@ -1,0 +1,259 @@
+{% extends "master.html" %}
+{% block title %}Sync Users{% endblock %}
+{% block content %}
+
+<p><a href="{% url 'index' %}">Home</a> / <a href="{{ request.path }}">Sync Users</a></p>
+
+<div class="text-center mb-3">
+    <h1 class="display-5">Sync Users Across Devices</h1>
+    <p class="text-muted">Transfers: profile · fingerprints · face · photo · card · password · QR</p>
+</div>
+<hr/>
+
+{% if error_msg %}
+    <div class="alert alert-danger">{{ error_msg }}</div>
+{% endif %}
+{% if success_msg %}
+    <div class="alert alert-success">{{ success_msg }}</div>
+{% endif %}
+
+{% if devices|length < 2 %}
+    <div class="alert alert-warning">
+        Need at least 2 online devices. Currently {{ devices|length }} connected.
+    </div>
+{% else %}
+
+<form method="post" id="syncForm">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="sync">
+
+    <!-- Mode -->
+    <div class="card mb-4 border-secondary">
+        <div class="card-header bg-secondary text-white">
+            <h5 class="mb-0">Sync Mode</h5>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="card p-3 h-100 border-primary">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="sync_mode"
+                                   id="mode_merge" value="merge" checked onchange="onMode()">
+                            <label class="form-check-label" for="mode_merge">
+                                <strong class="text-primary">⟶ Merge</strong>
+                            </label>
+                        </div>
+                        <p class="text-muted mb-0 mt-1" style="font-size:13px;">
+                            Host → Target(s).<br>
+                            <span class="text-success">ADD</span> new +
+                            <span class="text-warning">UPDATE</span> existing.<br>
+                            Extra users on target left untouched.
+                        </p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card p-3 h-100 border-danger">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="sync_mode"
+                                   id="mode_mirror" value="mirror" onchange="onMode()">
+                            <label class="form-check-label" for="mode_mirror">
+                                <strong class="text-danger">⟶ Mirror</strong>
+                            </label>
+                        </div>
+                        <p class="text-muted mb-0 mt-1" style="font-size:13px;">
+                            Host → Target(s).<br>
+                            <span class="text-success">ADD</span> +
+                            <span class="text-warning">UPDATE</span> +
+                            <span class="text-danger">DELETE</span> extras.<br>
+                            Target becomes exact copy of host.
+                        </p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card p-3 h-100 border-success">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="sync_mode"
+                                   id="mode_bidir" value="bidirectional" onchange="onMode()">
+                            <label class="form-check-label" for="mode_bidir">
+                                <strong class="text-success">⟷ Bidirectional</strong>
+                            </label>
+                        </div>
+                        <p class="text-muted mb-0 mt-1" style="font-size:13px;">
+                            Select devices below.<br>
+                            Every device gets every user.<br>
+                            No deletions — pure merge.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Host -->
+    <div id="hostSection" class="card mb-4 border-primary">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Step 1 — Host <small class="fw-normal">(read FROM this device)</small></h5>
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-hover mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width:48px"></th>
+                        <th>Device ID</th><th>Product</th>
+                        <th class="text-center">Users</th><th class="text-center">FP</th>
+                        <th class="text-center">Faces</th><th class="text-center">Cards</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for dev in devices %}
+                <tr>
+                    <td class="text-center">
+                        <input type="radio" name="host" value="{{ dev.device_id }}"
+                               class="form-check-input host-radio" data-did="{{ dev.device_id }}">
+                    </td>
+                    <td><strong>{{ dev.device_id }}</strong></td>
+                    <td class="text-muted">{{ dev.product_name }}</td>
+                    <td class="text-center"><span class="badge bg-primary">{{ dev.user_count|default:"?" }}</span></td>
+                    <td class="text-center"><span class="badge bg-info text-dark">{{ dev.fp_count|default:"?" }}</span></td>
+                    <td class="text-center"><span class="badge bg-success">{{ dev.face_count|default:"?" }}</span></td>
+                    <td class="text-center"><span class="badge bg-warning text-dark">{{ dev.card_count|default:"?" }}</span></td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Targets -->
+    <div class="card mb-4 border-warning">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0" id="targetHeading">
+                Step 2 — Target(s) <small class="fw-normal">(push TO these devices)</small>
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-hover mb-0 align-middle" id="targetTable">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width:48px"></th>
+                        <th>Device ID</th><th>Product</th>
+                        <th class="text-center">Users</th><th class="text-center">FP</th>
+                        <th class="text-center">Faces</th><th class="text-center">Cards</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for dev in devices %}
+                <tr data-did="{{ dev.device_id }}">
+                    <td class="text-center">
+                        <input type="checkbox" name="targets" value="{{ dev.device_id }}"
+                               class="form-check-input tgt-cb" data-did="{{ dev.device_id }}">
+                    </td>
+                    <td><strong>{{ dev.device_id }}</strong></td>
+                    <td class="text-muted">{{ dev.product_name }}</td>
+                    <td class="text-center"><span class="badge bg-primary">{{ dev.user_count|default:"?" }}</span></td>
+                    <td class="text-center"><span class="badge bg-info text-dark">{{ dev.fp_count|default:"?" }}</span></td>
+                    <td class="text-center"><span class="badge bg-success">{{ dev.face_count|default:"?" }}</span></td>
+                    <td class="text-center"><span class="badge bg-warning text-dark">{{ dev.card_count|default:"?" }}</span></td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="text-center mb-5">
+        <button type="button" id="syncBtn" class="btn btn-primary btn-lg px-5" onclick="doSync()">
+            ⟶ Run Sync
+        </button>
+        <p class="text-muted mt-2" style="font-size:13px;">
+            May take several minutes. Do not close this page.
+        </p>
+    </div>
+</form>
+{% endif %}
+
+{% if sync_log %}
+<div class="card mb-5">
+    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Sync Log</h5>
+        <span class="badge bg-secondary">{{ sync_log|length }} lines</span>
+    </div>
+    <div class="card-body p-0" style="max-height:650px;overflow-y:auto;background:#0f111a;">
+        <pre style="color:#cdd6f4;font-size:12.5px;margin:0;padding:14px;
+                    white-space:pre-wrap;line-height:1.65;">{% for line in sync_log %}{% if "OK" in line and "FAIL" not in line %}<span style="color:#a6e3a1;">{{ line }}</span>
+{% elif "FAIL" in line or "ERROR" in line or "ABORT" in line or "exception" in line %}<span style="color:#f38ba8;">{{ line }}</span>
+{% elif "WARNING" in line or "SKIP" in line or "offline" in line %}<span style="color:#fab387;">{{ line }}</span>
+{% elif "====" in line or "SYNC" in line or "MERGE" in line or "MIRROR" in line or "COMPLETE" in line or "BIDIR" in line %}<span style="color:#89b4fa;font-weight:bold;">{{ line }}</span>
+{% elif "STEP" in line or "ADD" in line or "UPDATE" in line or "DELETE" in line or "Plan" in line %}<span style="color:#f9e2af;">{{ line }}</span>
+{% elif "Pulling" in line or "Pulled" in line or "Found" in line %}<span style="color:#cba6f7;">{{ line }}</span>
+{% elif "BEFORE" in line or "AFTER" in line %}<span style="color:#89dceb;">{{ line }}</span>
+{% else %}{{ line }}
+{% endif %}{% endfor %}</pre>
+    </div>
+</div>
+{% endif %}
+
+<script>
+function onMode() {
+    var mode   = document.querySelector('input[name="sync_mode"]:checked').value;
+    var isBidir = mode === 'bidirectional';
+    var isMirror = mode === 'mirror';
+
+    document.getElementById('hostSection').style.display = isBidir ? 'none' : '';
+    document.getElementById('targetHeading').innerHTML   = isBidir
+        ? 'Select Devices to Merge'
+        : 'Step 2 — Target(s) <small class="fw-normal">(push TO these devices)</small>';
+
+    if (isBidir) {
+        document.querySelectorAll('.tgt-cb').forEach(cb => {
+            cb.disabled = false;
+            cb.closest('tr').style.opacity = '1';
+        });
+    }
+
+    var btn = document.getElementById('syncBtn');
+    btn.className = 'btn btn-lg px-5 ' + (isMirror ? 'btn-danger' : isBidir ? 'btn-success' : 'btn-primary');
+    btn.textContent = isBidir ? '⟷ Run Bidirectional Merge' : isMirror ? '⟶ Run Mirror (deletes extra users)' : '⟶ Run Merge';
+}
+
+document.querySelectorAll('.host-radio').forEach(function(r) {
+    r.addEventListener('change', function() {
+        var hid = this.dataset.did;
+        document.querySelectorAll('#targetTable tbody tr').forEach(function(row) {
+            var cb = row.querySelector('.tgt-cb');
+            if (row.dataset.did === hid) {
+                cb.disabled = true; cb.checked = false; row.style.opacity = '0.35';
+            } else {
+                cb.disabled = false; row.style.opacity = '1';
+            }
+        });
+    });
+});
+
+function doSync() {
+    var mode   = document.querySelector('input[name="sync_mode"]:checked').value;
+    var isBidir = mode === 'bidirectional';
+
+    if (!isBidir && !document.querySelector('.host-radio:checked')) {
+        alert('Step 1: Select a Host device.'); return;
+    }
+    var tgts = document.querySelectorAll('.tgt-cb:checked');
+    if (tgts.length === 0) {
+        alert(isBidir ? 'Select at least 2 devices.' : 'Step 2: Select at least one Target.'); return;
+    }
+    if (isBidir && tgts.length < 2) {
+        alert('Bidirectional needs at least 2 devices selected.'); return;
+    }
+    if (mode === 'mirror') {
+        var tgtNames = Array.from(tgts).map(cb => cb.value).join(', ');
+        if (!confirm('MIRROR: users on the target NOT on host will be PERMANENTLY DELETED.\n\nTarget(s): ' + tgtNames + '\n\nContinue?')) return;
+    }
+    var btn = document.getElementById('syncBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Running — do not close…';
+    document.getElementById('syncForm').submit();
+}
+
+onMode();
+</script>
+{% endblock %}

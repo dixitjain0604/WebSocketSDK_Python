@@ -1,0 +1,93 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="{% static 'css/site.css' %}">
+    <link rel="stylesheet" href="{% static 'lib/bootstrap/css/bootstrap.css' %}">
+    <title>{% block title %}{{ oem.app_name }}{% endblock %}</title>
+    <style>
+        :root {
+            --oem-primary: {{ oem.primary_color }};
+        }
+        .btn-primary, .badge.bg-primary {
+            background-color: {{ oem.primary_color }} !important;
+            border-color: {{ oem.primary_color }} !important;
+        }
+        a { color: {{ oem.primary_color }}; }
+        a:hover { color: {{ oem.primary_color }}; filter: brightness(0.85); }
+    </style>
+    {% block header %}{% endblock %}
+</head>
+<body>
+    <script src="{% static 'lib/bootstrap/js/bootstrap.bundle.js' %}"></script>
+    <script src="{% static 'lib/jquery/jquery-3.7.1.min.js' %}"></script>
+
+    <header>
+        <nav class="navbar navbar-expand-sm navbar-toggleable-sm border-bottom box-shadow mb-3"
+             style="background-color: {{ oem.navbar_color }};">
+            <div class="container">
+                <a class="navbar-brand fw-semibold" href="{% url 'index' %}"
+                   style="color: {{ oem.navbar_text_color }};">
+                    {% if oem.logo_url %}
+                        <img src="{{ oem.logo_url }}" height="28" class="me-2 align-middle">
+                    {% endif %}
+                    {{ oem.app_name }}
+                </a>
+
+                <button class="navbar-toggler" type="button"
+                        data-bs-toggle="collapse" data-bs-target=".navbar-collapse"
+                        aria-controls="navbarSupportedContent"
+                        aria-expanded="false" aria-label="Toggle navigation"
+                        style="border-color: {{ oem.navbar_text_color }};">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
+                    <ul class="navbar-nav flex-grow-1">
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'online_devices' %}"
+                               style="color: {{ oem.navbar_text_color }};">Online Devices</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'manage_firmware' %}"
+                               style="color: {{ oem.navbar_text_color }};">Firmware Binaries</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'search_attend_logs' %}"
+                               style="color: {{ oem.navbar_text_color }};">Attendance Logs</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'search_management_logs' %}"
+                               style="color: {{ oem.navbar_text_color }};">Management Logs</a>
+                        </li>
+                    </ul>
+
+                    <ul class="navbar-nav ms-auto">
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'oem_settings' %}"
+                               style="color: {{ oem.navbar_text_color }};"
+                               title="OEM / Branding">&#9998; OEM</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <div class="container">
+        <main role="main" class="pb-3">
+            {% block content %}
+            {% endblock %}
+        </main>
+    </div>
+
+    <footer class="border-top footer text-muted">
+        <div class="container">
+            {{ oem.footer_text }}{% if oem.company_name %} &mdash; {{ oem.company_name }}{% endif %}
+        </div>
+    </footer>
+
+</body>
+</html>

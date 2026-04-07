@@ -1,0 +1,89 @@
+{% extends "sdkdemoapp/base.html" %}
+{% block title %}Sync Users{% endblock %}
+{% block content %}
+
+<style>
+  .sync-container { max-width: 900px; margin: 20px auto; padding: 0 20px; }
+  .device-section { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+  .device-section h3 { margin-top: 0; color: #495057; }
+  .device-row { padding: 8px 12px; margin: 4px 0; background: #fff; border: 1px solid #e9ecef; border-radius: 4px; display: flex; align-items: center; gap: 10px; }
+  .device-row label { cursor: pointer; flex: 1; }
+  .device-row .device-id { font-weight: bold; color: #0d6efd; }
+  .device-row .device-type { color: #6c757d; font-size: 0.9em; }
+  .btn-sync { background: #0d6efd; color: white; border: none; padding: 12px 32px; border-radius: 6px; font-size: 16px; cursor: pointer; margin-top: 10px; }
+  .btn-sync:hover { background: #0b5ed7; }
+  .btn-sync:disabled { background: #6c757d; cursor: not-allowed; }
+  .log-panel { background: #1e1e1e; color: #d4d4d4; font-family: 'Courier New', monospace; font-size: 13px; padding: 16px; border-radius: 8px; white-space: pre-wrap; word-wrap: break-word; max-height: 500px; overflow-y: auto; margin-top: 20px; }
+  .error-msg { background: #f8d7da; color: #842029; border: 1px solid #f5c2c7; padding: 12px; border-radius: 6px; margin-bottom: 16px; }
+  .no-devices { color: #6c757d; font-style: italic; padding: 20px; text-align: center; }
+</style>
+
+<div class="sync-container">
+  <h2>Sync Users Between Devices</h2>
+  <p style="color: #6c757d;">
+    Pull all users + fingerprints + face data from the <strong>Host</strong> device
+    and push them to the selected <strong>Target</strong> device(s).
+  </p>
+
+  {% if error %}
+    <div class="error-msg">{{ error }}</div>
+  {% endif %}
+
+  {% if devices %}
+  <form method="post" id="syncForm">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="sync">
+
+    <div class="device-section">
+      <h3>1. Select Host Device (pull FROM)</h3>
+      {% for dev in devices %}
+      <div class="device-row">
+        <input type="radio" name="host" id="host_{{ dev.connection_id }}"
+               value="{{ dev.connection_id }}" required>
+        <label for="host_{{ dev.connection_id }}">
+          <span class="device-id">{{ dev.device_id }}</span>
+          <span class="device-type">(CID: {{ dev.connection_id }} — {{ dev.terminal_type }})</span>
+        </label>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="device-section">
+      <h3>2. Select Target Device(s) (push TO)</h3>
+      {% for dev in devices %}
+      <div class="device-row">
+        <input type="checkbox" name="targets" id="target_{{ dev.connection_id }}"
+               value="{{ dev.connection_id }}">
+        <label for="target_{{ dev.connection_id }}">
+          <span class="device-id">{{ dev.device_id }}</span>
+          <span class="device-type">(CID: {{ dev.connection_id }} — {{ dev.terminal_type }})</span>
+        </label>
+      </div>
+      {% endfor %}
+    </div>
+
+    <button type="submit" class="btn-sync" id="syncBtn">
+      Sync Users
+    </button>
+  </form>
+  {% else %}
+    <div class="no-devices">
+      No devices are currently online. Connect a device first.
+    </div>
+  {% endif %}
+
+  {% if sync_log %}
+    <h3 style="margin-top: 24px;">Sync Log</h3>
+    <div class="log-panel">{{ sync_log }}</div>
+  {% endif %}
+</div>
+
+<script>
+document.getElementById('syncForm')?.addEventListener('submit', function() {
+  var btn = document.getElementById('syncBtn');
+  btn.disabled = true;
+  btn.textContent = 'Syncing... please wait';
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,25 @@
+{% load widget_tweaks %}
+
+{% for row in form.rows %}
+<div class="row mb-2">
+    <label class="col-sm-3 col-form-label">Time Section {{ row.index }}</label>
+
+    {{ row.start.errors }}
+    <label class="col-sm-1 col-form-label" for="{{ row.start.id_for_label }}">Start Time</label>
+    <div class="col-sm-2">
+        {{ row.start | add_class:"form-control" }}
+    </div>
+
+    {{ row.end.errors }}
+    <label class="col-sm-1 col-form-label" for="{{ row.end.id_for_label }}">End Time</label>
+    <div class="col-sm-2">
+        {{ row.end | add_class:"form-control" }}
+    </div>
+
+    {{ row.status.errors }}
+    <label class="col-sm-1 col-form-label" for="{{ row.status.id_for_label }}">Status</label>
+    <div class="col-sm-2">
+        {{ row.status | add_class:"form-control" }}
+    </div>
+</div>
+{% endfor %}

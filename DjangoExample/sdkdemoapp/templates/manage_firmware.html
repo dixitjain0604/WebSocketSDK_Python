@@ -1,0 +1,47 @@
+{% extends "master.html" %}
+
+{% block title %}
+  Firmware Binaries
+{% endblock %}
+
+{% block content %}
+
+<p>
+    {% include 'navbar_manage_firmware.html' %}
+</p>
+
+<div class="text-center">
+    <h1 class="display-4">Firmware Binaries</h1>
+</div>
+
+<p>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Firmware Name</th>
+                <th>Firmware Data</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for x in firmware_list %}
+            <tr>
+                <td>{{ x.name }}</td>
+                <td>
+                    <a href="{% url 'get_firmware' firmware_name=x.name %}" class="text-primary me-1">Download</a>
+                    <a href="{% url 'delete_firmware' firmware_name=x.name %}" class="text-danger">Delete</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% if is_empty %}
+    <span class="text-muted fst-italic">No firmware binary is present on server. Click 'Upload' to create one.</span>
+    {% endif %}
+</p>
+
+<p>
+    <a href="{% url 'upload_firmware' %}" class="btn btn-primary">Upload</a>
+</p>
+
+{% endblock %}

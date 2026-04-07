@@ -1,0 +1,46 @@
+{% extends "master.html" %}
+
+{% block title %}User Setting{% endblock %}
+
+{% block content %}
+<p>
+    {% include 'navbar_control_device.html' %} /
+    <a href="{{ request.path }}">User Setting</a>
+</p>
+
+<div class="text-center">
+    <h1 class="display-4">User Setting</h1>
+</div>
+
+<hr />
+
+<div class="row">
+    <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+            <button type="submit" name="action_get_user_message" class="btn btn-outline-primary">GetUserMessage</button>
+            <button type="submit" name="action_set_user_message" class="btn btn-outline-primary">SetUserMessage</button>
+            <button type="submit" name="action_get_balance_time" class="btn btn-outline-primary">GetBalanceTime</button>
+            <button type="submit" name="action_set_balance_time" class="btn btn-outline-primary">SetBalanceTime</button>
+            <button type="submit" name="action_get_holidays" class="btn btn-outline-primary">GetHolidays</button>
+            <button type="submit" name="action_set_holidays" class="btn btn-outline-primary">SetHolidays</button>
+        </div>
+
+        {% if model.info_msg is not None %}
+        <div class="mb-3">
+            <div class="alert alert-info">{{ model.info_msg }}</div>
+        </div>
+        {% endif %}
+        {% if model.error_msg is not None %}
+        <div class="mb-3">
+            <div class="alert alert-danger">{{ model.error_msg }}</div>
+        </div>
+        {% endif %}
+
+        {{ form }}
+    </form>
+</div>
+
+<hr />
+
+{% endblock %}

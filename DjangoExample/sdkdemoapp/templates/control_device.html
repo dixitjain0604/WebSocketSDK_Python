@@ -1,0 +1,114 @@
+{% extends "master.html" %}
+
+{% block title %}
+  Device controls
+{% endblock %}
+
+{% block content %}
+
+<p>
+    {% include 'navbar_control_device.html' %}
+</p>
+
+<div class="text-center mb-3">
+    <h1 class="display-4">Device controls</h1>
+</div>
+
+<p>
+    {% if model is not None %}
+    <table class="table mb-3">
+        <tbody>
+            <tr>
+                <td>Device ID</td>
+                <td>{{ model.device_id }}</td>
+            </tr>
+            <tr>
+                <td>Terminal Type</td>
+                <td>{{ model.attributes.terminal_type }}</td>
+            </tr>
+            <tr>
+                <td>Product Name</td>
+                <td>{{ model.attributes.product_name }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    {% else %}
+    <div class="alert alert-warning">This connection to device was lost. Return to 'Online Devices' page to see currently online devices.</div>
+    {% endif %}
+</p>
+
+<h4>Device Status/Info/Settings</h4>
+<p>
+    <a href="{% url 'device_config_status' connection_id=connection_id %}">Status/Info/Misc Controls</a> |
+    <a href="{% url 'manage_ethernet_setting' connection_id=connection_id %}">Ethernet Settings</a> |
+    <a href="{% url 'manage_wifi_setting' connection_id=connection_id %}">Wi-Fi Settings</a> |
+    <a href="{% url 'manage_ntp_setting' connection_id=connection_id %}">NTP Server Settings</a> |
+    <a href="{% url 'manage_webserverurl_setting' connection_id=connection_id %}">Server URL Settings</a> |
+    <a href="{% url 'tr_icon_setting' connection_id=connection_id %}">TR Icon Settings(M91 German Only)</a>
+</p>
+
+<h4>Attendance Settings</h4>
+<p>
+    <a href="{% url 'manage_departments' connection_id=connection_id %}">Manage Departments</a> |
+    <a href="{% url 'manage_proxy_departments' connection_id=connection_id %}">Manage Proxy Departments</a> |
+    <a href="{% url 'manage_bell_settings' connection_id=connection_id %}">Manage Bell Settings</a> |
+    <a href="{% url 'manage_auto_attendance_settings' connection_id=connection_id %}">Manage Auto Attendance Settings</a>
+</p>
+
+<h4>Access Control</h4>
+<p>
+    <a href="{% url 'manage_access_timezone_settings' connection_id=connection_id %}">Access Timezone Settings</a> |
+    <a href="{% url 'manage_lock_control' connection_id=connection_id %}">Lock Control</a>
+</p>
+
+<h4>User Data</h4>
+<p>
+    <a href="{% url 'manage_users' connection_id=connection_id %}">User Management</a> |
+    <a href="{% url 'manage_face_data' connection_id=connection_id %}">Manage Face Data</a> |
+    <a href="{% url 'manage_fingerprint' connection_id=connection_id %}">Manage Fingerprints</a> |
+    <a href="{% url 'view_user_misc_cred' connection_id=connection_id %}">View Password/Card/QR</a> |
+    <a href="{% url 'manage_user_photo' connection_id=connection_id %}">Manage Photo</a> |
+    <br />
+    <a href="{% url 'remote_enroll' connection_id=connection_id %}">Remote Enroll</a> |
+    <a href="{% url 'enroll_face_by_photo' connection_id=connection_id %}">Enroll Face By Photo</a>
+</p>
+<h4>User Data (Custom):</h4>
+<p>
+    <a href="{% url 'manage_user_attend_only' connection_id=connection_id %}">Manange Attend-Only Setting</a> |
+    <a href="{% url 'manage_user_message' connection_id=connection_id %}">Manange User Message</a>
+</p>
+
+<h4>User Data (M91 German Only):</h4>
+<p>
+    <a href="{% url 'manage_user_german' connection_id=connection_id %}">Manange User Data for M91 German</a>
+</p>
+
+<h4>View Logs On Device (On-Demand Log Fetching)</h4>
+<p>
+    <a href="{% url 'view_device_attend_logs' connection_id=connection_id %}">Attendance Logs</a>
+</p>
+
+{% if model.device_id is not None %}
+<h4>View Logs Uploaded By Device (Background Log Transfer)</h4>
+<p>
+    <a href="{% url 'search_attend_logs' device_id=model.device_id %}">Attendance Logs</a>
+</p>
+{% endif %}
+
+<h4>Miscellaneous</h4>
+<p>
+    <a href="{% url 'center_message_setting' connection_id=connection_id %}">Center Message Setting</a> |
+    <a href="{% url 'video_streaming_setting' connection_id=connection_id %}">Video Streaming Setting</a>
+</p>
+
+<h4>Maintenance</h4>
+<p>
+    <a href="{% url 'clear_data' connection_id=connection_id %}">Clear Data</a> |
+    <a href="{% url 'firmware_version' connection_id=connection_id %}">Firmware Version</a> |
+    <a href="{% url 'write_firmware' connection_id=connection_id %}">Write Firmware</a>
+</p>
+
+<hr />
+
+{% endblock %}

@@ -1,0 +1,18 @@
+<script>
+    $(function () {
+        initializeBinaryEditor("{{ widget.attrs.id }}", "data.bin");
+    });
+</script>
+
+<input type="text" id="{{ widget.attrs.id }}" name="{{ widget.name }}"{% if widget.value != None %} value="{{ widget.value|stringformat:'s' }}"{% endif %} readonly hidden />
+<div class="mb-2">
+    <div class="d-flex">
+        <div id="{{ widget.attrs.id }}_presentStatus" class="border border-secondary-subtle rounded-start flex-fill p-1 text-truncate"></div>
+        <div class="ms-auto">
+            <button type="button" class="btn rounded-0" id="{{ widget.attrs.id }}_downloadButton"
+                >Save to file</button><button type="button" class="btn rounded-0 btn-outline-primary" data-bs-toggle="modal" data-bs-target="#{{ widget.attrs.id }}Modal"
+                >Open file</button><button type="button" class="btn rounded-start-0" id="{{ widget.attrs.id }}_clearDataButton"
+                >Clear</button>
+        </div>
+    </div>
+</div>

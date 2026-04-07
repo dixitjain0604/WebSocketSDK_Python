@@ -1,0 +1,40 @@
+{% load widget_tweaks %}
+
+<div class="row mb-2">
+    {{ form.ring_times.errors }}
+    <label class="col-sm-3 col-form-label" for="{{ form.ring_times.id_for_label }}">{{ form.ring_times.label }}</label>
+    <div class="col-sm-9">
+        {{ form.ring_times | add_class:"form-control" }}
+    </div>
+</div>
+
+{% for row in form.rows %}
+
+<div class="row mb-2">
+    <label class="col-sm-3 col-form-label">Bell {{ row.index }}</label>
+
+    {{ row.valid.errors }}
+    <div class="col-sm-2">
+        {{ row.valid | add_class:"form-control" }}
+    </div>
+
+    <label class="col-sm-1 col-form-label" for="{{ row.bell_type.id_for_label }}">Type</label>
+    {{ row.bell_type.errors }}
+    <div class="col-sm-2">
+        {{ row.bell_type | add_class:"form-control" }}
+    </div>
+
+    <label class="col-sm-1 col-form-label" for="{{ row.hour.id_for_label }}">Hour</label>
+    {{ row.hour.errors }}
+    <div class="col-sm-1">
+        {{ row.hour | add_class:"form-control" }}
+    </div>
+
+    <label class="col-sm-1 col-form-label" for="{{ row.minute.id_for_label }}">Minute</label>
+    {{ row.minute.errors }}
+    <div class="col-sm-1">
+        {{ row.minute | add_class:"form-control" }}
+    </div>
+</div>
+
+{% endfor %}

@@ -1,0 +1,45 @@
+{% extends "master.html" %}
+
+{% block title %}Clear Data{% endblock %}
+
+{% block content %}
+<p>
+    {% include 'navbar_control_device.html' %} /
+    <a href="{{ request.path }}">Clear Data</a>
+</p>
+
+<div class="text-center">
+    <h1 class="display-4">Clear Data</h1>
+</div>
+
+<hr />
+
+<div class="row">
+    <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+            <button type="submit" name="action_clear_user_data" class="btn btn-outline-danger">Clear User Data</button>
+            <button type="submit" name="action_take_off_managers" class="btn btn-outline-danger">Take Off Managers</button>
+            <button type="submit" name="action_clear_attendance_logs" class="btn btn-outline-danger">Clear Attendance Logs</button>
+            <button type="submit" name="action_clear_management_logs" class="btn btn-outline-danger">Clear Management Logs</button>
+            <button type="submit" name="action_clear_all" class="btn btn-outline-danger">Clear All Data</button>
+        </div>
+
+        {% if model.info_msg is not None %}
+        <div class="mb-3">
+            <div class="alert alert-info">{{ model.info_msg }}</div>
+        </div>
+        {% endif %}
+        {% if model.error_msg is not None %}
+        <div class="mb-3">
+            <div class="alert alert-danger">{{ model.error_msg }}</div>
+        </div>
+        {% endif %}
+
+        {{ form }}
+    </form>
+</div>
+
+<hr />
+
+{% endblock %}

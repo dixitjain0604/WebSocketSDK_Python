@@ -1,0 +1,44 @@
+{% extends "master.html" %}
+
+{% block title %}
+  List of all online devices
+{% endblock %}
+
+
+{% block content %}
+<p>
+    {% include 'navbar_online_devices.html' %}
+</p>
+
+<div class="text-center">
+    <h1 class="display-4">List of online devices</h1>
+</div>
+
+<p>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Device ID</th>
+                <th>Connection ID</th>
+                <th>Terminal Type</th>
+                <th>Product Name</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for x in model %}
+            <tr>
+                <td>{{ x.device_id }}</td>
+                <td>{{ x.connection_id }}</td>
+                <td>{{ x.attributes.terminal_type }}</td>
+                <td>{{ x.attributes.product_name }}</td>
+                <td>
+                    <a class="btn btn-primary" href="{% url 'control_device' connection_id=x.connection_id %}">Open</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</p>
+
+{% endblock %}

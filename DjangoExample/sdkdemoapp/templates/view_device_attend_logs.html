@@ -1,0 +1,130 @@
+{% extends "master.html" %}
+
+{% block title %}View Attendance Logs in Device{% endblock %}
+
+{% block content %}
+<p>
+    {% include 'navbar_control_device.html' %} /
+    <a href="{{ request.path }}">Attendance Logs</a>
+</p>
+
+<div class="text-center">
+    <h1 class="display-4">View Attendance Logs in Device</h1>
+</div>
+
+<hr />
+
+<div class="row">
+    <form method="post">
+        {% csrf_token %}
+
+        {% if model.info_msg is not None %}
+        <div class="mb-3">
+            <div class="alert alert-info">{{ model.info_msg }}</div>
+        </div>
+        {% endif %}
+        {% if model.error_msg is not None %}
+        <div class="mb-3">
+            <div class="alert alert-danger">{{ model.error_msg }}</div>
+        </div>
+        {% endif %}
+
+        {{ form }}
+
+        <div class="mb-2">
+            <button type="submit" name="action_info" class="btn btn-outline-primary">Get Log Pos Info</button>
+            <button type="submit" name="action_first" class="btn btn-outline-primary">Get First Log</button>
+            <button type="submit" name="action_next" class="btn btn-outline-primary">Get Next Log</button>
+            <button type="submit" name="action_delete" class="btn btn-outline-danger">Delete All Logs Before 'Next log id'</button>
+        </div>
+    </form>
+</div>
+
+<hr />
+
+{% if model.log is not None %}
+<table class="table">
+    <tbody>
+        <tr>
+            <td>Log ID</td>
+            <td>{{ model.log.log_id }}</td>
+        </tr>
+        <tr>
+            <td>User ID</td>
+            <td>{{ model.log.user_id }}</td>
+        </tr>
+        <tr>
+            <td>Time Zone</td>
+            <td>{{ model.timezone_string }}</td>
+        </tr>
+        <tr>
+            <td>Time</td>
+            <td>{{ model.log.time }}</td>
+        </tr>
+        <tr>
+            <td>Attend Status</td>
+            <td>{{ model.log.attend_status }}</td>
+        </tr>
+        <tr>
+            <td>Action</td>
+            <td>{{ model.log.action }}</td>
+        </tr>
+        <tr>
+            <td>Job Code</td>
+            <td>{{ model.log.jobcode }}</td>
+        </tr>
+        <tr>
+            <td>Photo</td>
+            <td>
+                {% if model.log.photo is not None %}
+                <img src="data:application/octet-stream;,{{ model.encoded_photo_data }}" />
+                {% endif %}
+            </td>
+        </tr>
+        <tr>
+            <td>Body Temperature</td>
+            <td>{{ model.body_temperature_string }}</td>
+        </tr>
+        <tr>
+            <td>Attend Only</td>
+            <td>{{ model.attendonly_string }}</td>
+        </tr>
+        <tr>
+            <td>Expired</td>
+            <td>{{ model.expired_string }}</td>
+        </tr>
+        <tr>
+            <td>Latitude</td>
+            <td>{{ model.latitude_string }}</td>
+        </tr>
+        <tr>
+            <td>Longitude</td>
+            <td>{{ model.longitude_string }}</td>
+        </tr>
+    </tbody>
+</table>
+{% endif %}
+
+{% if model.pos_info is not None %}
+<table class="table">
+    <tbody>
+        <tr>
+            <td>Log Count</td>
+            <td>{{ model.pos_info.log_count }}</td>
+        </tr>
+        <tr>
+            <td>Max Count</td>
+            <td>{{ model.pos_info.max_count }}</td>
+        </tr>
+        <tr>
+            <td>Start Pos</td>
+            <td>{{ model.pos_info.start_pos }}</td>
+        </tr>
+
+    </tbody>
+</table>
+{% endif %}
+
+<hr />
+
+{% endblock %}

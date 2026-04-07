@@ -1,0 +1,82 @@
+{% extends "master.html" %}
+
+{% block title %}Attendance Logs{% endblock %}
+
+{% block content %}
+<p>
+    <a href="{% url 'index' %}">Home</a>
+    / <a href="{% url 'search_attend_logs' %}">Attendance Logs</a>
+    {% if device_id is not None %}
+    / <a href="{% url 'search_attend_logs' device_id=device_id %}">{{device_id}}</a>
+    {% endif %}
+</p>
+
+<div class="text-center">
+    <h1 class="display-4">Attendance Logs{% if device_id is not None %} from {{device_id}}{% endif %}</h1>
+</div>
+
+<hr />
+
+<h4 class="mb-3">Search Criteria</h4>
+<form method="post">
+    {% csrf_token %}
+    {{ form }}
+
+    <div class="mb-3">
+        <button type="submit" class="btn btn-primary">Search Logs</button>
+        <button type="submit" name="action_clear" class="btn btn-danger ">Clear Logs</button>
+    </div>
+</form>
+
+{% if num_deleted is not None %}
+<div class="alert alert-info">Cleared {{num_deleted}} attendance log(s).</div>
+{% endif %}
+
+<hr />
+
+<p>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Device ID</th>
+                <th>Log ID</th>
+                <th>Time</th>
+                <th>User ID</th>
+                <th>Attend Status</th>
+                <th>Action</th>
+                <th>Job Code</th>
+                <th>Photo?</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for x in logs %}
+            <tr>
+                <td>{{x.device_id}}</td>
+                <td>{{x.log_id}}</td>
+                <td>{{x.time}}</td>
+                <td>{{x.user_id}}</td>
+                <td>{{x.attend_status}}</td>
+                <td>{{x.action}}</td>
+                <td>{{x.job_code}}</td>
+                <td>{% if x.photo is not None %}Yes{% else %}No{% endif %}</td>
+                <td><a href="{% url 'attend_log_details' id=x.id %}?back_url={{ request.path|urlencode }}">Details</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</p>
+
+{% if is_empty %}
+<p>
+    <span class="text-muted fst-italic">No attendance log matching the search criteria was found.</span>
+</p>
+{% endif %}
+
+{% if count_limit is not None %}
+<p>
+    <span class="text-muted fst-italic">Only the most recent {{count_limit}} logs were displayed. To view others, try refining your search criteria.</span>
+</p>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,51 @@
+{% extends "master.html" %}
+
+{% block title %}
+  Write Firmware
+{% endblock %}
+
+{% block content %}
+
+<p>
+    {% include 'navbar_control_device.html' %} /
+    <a href="{{ request.path }}">Write Firmware</a>
+</p>
+
+<div class="text-center">
+    <h1 class="display-4">Write Firmware</h1>
+</div>
+
+<hr />
+
+<div class="row">
+    <form method="post">
+        {% csrf_token %}
+        {% if model.info_msg is not None %}
+        <div class="mb-3">
+            <div class="alert alert-info">{{ model.info_msg }}</div>
+        </div>
+        {% endif %}
+        {% if model.error_msg is not None %}
+        <div class="mb-3">
+            <div class="alert alert-danger">{{ model.error_msg }}</div>
+        </div>
+        {% endif %}
+
+        {{ form }}
+
+        <div class="text-muted fst-italic mb-3">The public URL must be reachable from device. URLs like http://localhost won't work.</div>
+
+        <div class="mb-3">
+            <button type="submit" name="action_write" class="btn btn-primary">OK</button>
+            <a href="{% url 'control_device' connection_id=connection_id %}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<div class="fst-italic">
+    Go to <a href="{% url 'manage_firmware' %}">Firmware Binaries</a> to view or add firmware files.
+</div>
+
+<hr />
+
+{% endblock %}

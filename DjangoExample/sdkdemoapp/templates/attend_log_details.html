@@ -1,0 +1,79 @@
+{% extends "master.html" %}
+
+{% block title %}Log Details{% endblock %}
+
+{% block content %}
+<div class="text-center">
+    <h1 class="display-4">Log Details</h1>
+</div>
+
+<p>
+    <table class="table">
+        <tbody>
+            <tr>
+                <td>Device ID</td>
+                <td>{{ log.device_id }}</td>
+            </tr>
+            <tr>
+                <td>Log ID</td>
+                <td>{{ log.log_id }}</td>
+            </tr>
+            <tr>
+                <td>Time</td>
+                <td>{{ log.time }}</td>
+            </tr>
+            <tr>
+                <td>User ID</td>
+                <td>{{ log.user_id }}</td>
+            </tr>
+            <tr>
+                <td>Timezone Offset</td>
+                <td>{{ log.timezone_offset }}</td>
+            </tr>
+            <tr>
+                <td>Attend Status</td>
+                <td>{{ log.attend_status }}</td>
+            </tr>
+            <tr>
+                <td>Action</td>
+                <td>{{ log.action }}</td>
+            </tr>
+            <tr>
+                <td>Job Code</td>
+                <td>{{ log.job_code }}</td>
+            </tr>
+            <tr>
+                <td>Photo</td>
+                <td>{% if log.photo is not None %}<img src="data:application/octet-stream;,{{ encoded_photo_data }}" />{% endif %}</td>
+            </tr>
+            <tr>
+                <td>Body Temperature</td>
+                <td>{{ log.body_temperature }}</td>
+            </tr>
+            <tr>
+                <td>Attend Only?</td>
+                <td>{{ log.attend_only }}</td>
+            </tr>
+            <tr>
+                <td>Expired?</td>
+                <td>{{ log.expired }}</td>
+            </tr>
+            <tr>
+                <td>Latitude</td>
+                <td>{{ log.latitude }}</td>
+            </tr>
+            <tr>
+                <td>Longitude</td>
+                <td>{{ log.longitude }}</td>
+            </tr>
+        </tbody>
+    </table>
+</p>
+
+{% if back_url is not None %}
+<p>
+    <a href="{{back_url}}">Back</a>
+</p>
+{% endif %}
+
+{% endblock %}

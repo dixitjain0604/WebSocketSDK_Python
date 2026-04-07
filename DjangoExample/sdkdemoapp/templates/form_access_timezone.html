@@ -1,0 +1,29 @@
+{% load widget_tweaks %}
+
+<div class="row mb-2">
+    {{ form.timezone_no.errors }}
+    <label class="col-sm-3 col-form-label" for="{{ form.timezone_no.id_for_label }}">{{ form.timezone_no.label }}</label>
+    <div class="col-sm-8">
+        {{ form.timezone_no | add_class:"form-control" }}
+    </div>
+</div>
+
+{% for row in form.rows %}
+
+<div class="row mb-2">
+    <label class="col-sm-3 col-form-label">{{ row.weekday }}</label>
+
+    <label class="col-sm-2 col-form-label" for="{{ row.start.id_for_label }}">Start</label>
+    {{ row.start.errors }}
+    <div class="col-sm-2">
+        {{ row.start | add_class:"form-control" }}
+    </div>
+
+    <label class="col-sm-2 col-form-label" for="{{ row.end.id_for_label }}">End</label>
+    {{ row.end.errors }}
+    <div class="col-sm-2">
+        {{ row.end | add_class:"form-control" }}
+    </div>
+</div>
+
+{% endfor %}

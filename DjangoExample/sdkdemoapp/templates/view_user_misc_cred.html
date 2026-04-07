@@ -1,0 +1,64 @@
+{% extends "master.html" %}
+
+{% block title %}View User Password/Card/QR{% endblock %}
+
+{% block content %}
+<p>
+    {% include 'navbar_control_device.html' %} /
+    <a href="{{ request.path }}">View User Password/Card/QR</a>
+</p>
+
+<div class="text-center">
+    <h1 class="display-4">View User Password/Card/QR</h1>
+</div>
+
+<hr />
+
+<div class="row">
+    <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+            <button type="submit" name="action_read_password" class="btn btn-outline-primary">Get Password</button>
+            <button type="submit" name="action_read_card" class="btn btn-outline-primary">Get Card</button>
+            <button type="submit" name="action_read_qr" class="btn btn-outline-primary">Get QR</button>
+        </div>
+
+        {% if model.info_msg is not None %}
+        <div class="mb-3">
+            <div class="alert alert-info">{{ model.info_msg }}</div>
+        </div>
+        {% endif %}
+        {% if model.error_msg is not None %}
+        <div class="mb-3">
+            <div class="alert alert-danger">{{ model.error_msg }}</div>
+        </div>
+        {% endif %}
+
+        {{ form }}
+    </form>
+
+    {% if model.password is not None %}
+    <div class="row mb-2">
+        <div class="col-sm-3">Password</div>
+        <div class="col-sm-9">{{ model.password }}</div>
+    </div>
+    {% endif %}
+
+    {% if model.card is not None %}
+    <div class="row mb-2">
+        <div class="col-sm-3">Card</div>
+        <div class="col-sm-9">{{ model.card }}</div>
+    </div>
+    {% endif %}
+
+    {% if model.qr is not None %}
+    <div class="row mb-2">
+        <div class="col-sm-3">QR</div>
+        <div class="col-sm-9">{{ model.qr }}</div>
+    </div>
+    {% endif %}
+</div>
+
+<hr />
+
+{% endblock %}

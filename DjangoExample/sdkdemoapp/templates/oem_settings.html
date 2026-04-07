@@ -1,0 +1,142 @@
+{% extends "master.html" %}
+{% block title %}OEM Settings — {{ oem.app_name }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+
+    <h2 class="mb-1">OEM / Branding Settings</h2>
+    <p class="text-muted mb-4">Customise the appearance of this application for your brand.</p>
+
+    {% if success %}
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+      Settings saved successfully.
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endif %}
+    {% if error %}
+    <div class="alert alert-danger">{{ error }}</div>
+    {% endif %}
+
+    <form method="post">
+      {% csrf_token %}
+
+      <div class="card mb-4">
+        <div class="card-header fw-semibold">Identity</div>
+        <div class="card-body">
+
+          <div class="mb-3">
+            <label class="form-label">Application Name</label>
+            <input type="text" class="form-control" name="app_name"
+                   value="{{ oem.app_name }}" placeholder="Web SDK Demo App" required>
+            <div class="form-text">Shown in the navbar brand and page titles.</div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Company Name</label>
+            <input type="text" class="form-control" name="company_name"
+                   value="{{ oem.company_name }}" placeholder="Your Company Ltd.">
+            <div class="form-text">Displayed in the footer alongside the copyright text.</div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Footer Text</label>
+            <input type="text" class="form-control" name="footer_text"
+                   value="{{ oem.footer_text }}" placeholder="© 2025">
+          </div>
+
+          <div class="mb-0">
+            <label class="form-label">Logo URL</label>
+            <input type="url" class="form-control" name="logo_url"
+                   value="{{ oem.logo_url }}" placeholder="https://example.com/logo.png">
+            <div class="form-text">Leave blank to use the application name as text brand.</div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="card mb-4">
+        <div class="card-header fw-semibold">Colours</div>
+        <div class="card-body">
+
+          <div class="row g-3">
+            <div class="col-sm-4">
+              <label class="form-label">Navbar Background</label>
+              <div class="input-group">
+                <input type="color" class="form-control form-control-color"
+                       id="navbarColorPicker" value="{{ oem.navbar_color }}"
+                       oninput="document.getElementById('navbarColorText').value=this.value">
+                <input type="text" class="form-control font-monospace"
+                       id="navbarColorText" name="navbar_color"
+                       value="{{ oem.navbar_color }}" maxlength="32"
+                       oninput="document.getElementById('navbarColorPicker').value=this.value">
+              </div>
+            </div>
+
+            <div class="col-sm-4">
+              <label class="form-label">Navbar Text</label>
+              <div class="input-group">
+                <input type="color" class="form-control form-control-color"
+                       id="navbarTextPicker" value="{{ oem.navbar_text_color }}"
+                       oninput="document.getElementById('navbarTextText').value=this.value">
+                <input type="text" class="form-control font-monospace"
+                       id="navbarTextText" name="navbar_text_color"
+                       value="{{ oem.navbar_text_color }}" maxlength="32"
+                       oninput="document.getElementById('navbarTextPicker').value=this.value">
+              </div>
+            </div>
+
+            <div class="col-sm-4">
+              <label class="form-label">Primary / Accent</label>
+              <div class="input-group">
+                <input type="color" class="form-control form-control-color"
+                       id="primaryColorPicker" value="{{ oem.primary_color }}"
+                       oninput="document.getElementById('primaryColorText').value=this.value">
+                <input type="text" class="form-control font-monospace"
+                       id="primaryColorText" name="primary_color"
+                       value="{{ oem.primary_color }}" maxlength="32"
+                       oninput="document.getElementById('primaryPicker').value=this.value">
+              </div>
+            </div>
+          </div>
+
+          <!-- live preview -->
+          <div class="mt-4">
+            <p class="form-label mb-1">Live Navbar Preview</p>
+            <nav id="oemPreview" class="navbar px-3 rounded"
+                 style="background-color:{{ oem.navbar_color }};">
+              <span id="oemPreviewBrand" class="navbar-brand mb-0 h6"
+                    style="color:{{ oem.navbar_text_color }};">
+                {% if oem.logo_url %}<img src="{{ oem.logo_url }}" height="24" class="me-2">{% endif %}
+                {{ oem.app_name }}
+              </span>
+            </nav>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary px-4">Save Settings</button>
+        <a href="{% url 'index' %}" class="btn btn-outline-secondary">Cancel</a>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+<script>
+  // Live preview wiring
+  const navBg   = document.getElementById('navbarColorPicker');
+  const navText = document.getElementById('navbarTextPicker');
+  const preview = document.getElementById('oemPreview');
+  const brand   = document.getElementById('oemPreviewBrand');
+
+  function updatePreview() {
+    preview.style.backgroundColor = navBg.value;
+    brand.style.color = navText.value;
+  }
+  navBg.addEventListener('input', updatePreview);
+  navText.addEventListener('input', updatePreview);
+</script>
+{% endblock %}

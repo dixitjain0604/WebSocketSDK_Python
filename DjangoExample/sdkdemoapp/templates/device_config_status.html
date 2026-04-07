@@ -1,0 +1,133 @@
+{% extends "master.html" %}
+{% load widget_tweaks %}
+
+{% block title %}Device Status/Info/Misc Controls{% endblock %}
+
+{% block content %}
+<p>
+    {% include 'navbar_control_device.html' %} /
+    <a href="{{ request.path }}">Status/Info/Misc Controls</a>
+</p>
+
+<div class="text-center">
+    <h1 class="display-4">Device Status/Info/Misc Controls</h1>
+</div>
+
+<hr />
+
+<script>
+    $(function () {
+        var device_info_param_choices = {{ model.device_info_choices|safe }};
+        var initial_selection = "{{ form.device_info_value_choice.value }}";
+
+        var choiceField = $("#id_device_info_value_choice");
+        var paramField = $("#id_device_info_param");
+
+        var valueElements = $.merge($("#id_device_info_value"), $("#id_device_info_value_label"));
+        var choiceElements = $.merge($("#id_device_info_value_choice_label"), choiceField);
+
+        function onParamChange(paramField, initialSelection) {
+            var choices;
+            if (paramField.selectedIndex >= 0) {
+                var param_name = paramField[paramField.selectedIndex].value;
+                choices = device_info_param_choices[param_name];
+            }
+
+            choiceField.empty();
+            if (choices !== undefined) {
+                choices.forEach(function (value) {
+                    var option = document.createElement("option");
+                    option.value = value;
+                    option.innerText = value;
+                    if (initialSelection !== undefined && value == initialSelection)
+                        option.selected = true;
+                    choiceField.append(option);
+                });
+
+                valueElements.css("display", "none");
+                choiceElements.css("display", "block");
+            }
+            else {
+                choiceElements.css("display", "none");
+                valueElements.css("display", "block");
+            }
+        }
+
+        paramField.on("change", function () {
+            onParamChange(this);
+        });
+
+        onParamChange(paramField[0], initial_selection);
+    });
+</script>
+
+<div class="row">
+    <form method="post">
+        {% csrf_token %}
+
+        <div class="mb-3">
+            <button type="submit" name="action_disable_device" class="btn btn-outline-primary">Disable Device</button>
+            <button type="submit" name="action_enable_device" class="btn btn-outline-primary">Enable Device</button>
+            <button type="submit" name="action_get_time" class="btn btn-outline-primary">Get Time</button>
+            <button type="submit" name="action_set_time" class="btn btn-outline-primary">Set Time</button>
+            <button type="submit" name="action_get_status_all" class="btn btn-outline-primary">Get All Status</button>
+            <button type="submit" name="action_get_info_all" class="btn btn-outline-primary">Get All Info</button>
+        </div>
+
+        <div class="row mb-2">
+            {{ form.device_status_param.errors }}
+            <label class="col-sm-2 col-form-label" for="{{ form.device_status_param.id_for_label }}">{{ form.device_status_param.label }}</label>
+            <div class="col-sm-2">
+                {{ form.device_status_param | add_class:"form-control" }}
+            </div>
+            <div class="col-sm-2">
+                <button type="submit" name="action_get_status" class="btn btn-outline-primary">Get Status</button>
+            </div>
+        </div>
+
+        <div class="row mb-2">
+            {{ form.device_info_param.errors }}
+            <label class="col-sm-2 col-form-label" for="{{ form.device_info_param.id_for_label }}">{{ form.device_info_param.label }}</label>
+            <div class="col-sm-2">
+                {{ form.device_info_param | add_class:"form-control" }}
+            </div>
+            <div class="col-sm-2">
+                <button type="submit" name="action_get_info" class="btn btn-outline-primary">Get Device Info</button>
+            </div>
+
+            {{ form.device_info_value.errors }}
+            {{ form.device_info_value_choice.errors }}
+            <label class="col-sm-2 col-form-label" for="{{ form.device_info_value.id_for_label }}" id="id_device_info_value_label" style="display:none">{{ form.device_info_value.label }}</label>
+            <label class="col-sm-2 col-form-label" for="{{ form.device_info_value_choice.id_for_label }}" id="id_device_info_value_choice_label">{{ form.device_info_value_choice.label }}</label>
+            <div class="col-sm-2">
+                {{ form.device_info_value | add_class:"form-control" | append_attr:"style:display:none" }}
+                {{ form.device_info_value_choice | add_class:"form-control" }}
+            </div>
+            <div class="col-sm-2">
+                <button type="submit" name="action_set_info" class="btn btn-outline-primary">Set Device Info</button>
+            </div>
+        </div>
+
+        {% if model.info_msg is not None %}
+        <div class="mb-3">
+            <div class="alert alert-info">{{ model.info_msg }}</div>
+        </div>
+        {% endif %}
+        {% if model.error_msg is not None %}
+        <div class="mb-3">
+            <div class="alert alert-danger">{{ model.error_msg }}</div>
+        </div>
+        {% endif %}
+
+        {% if model.result_str is not None %}
+        <p>Result:</p>
+        <div class="mb-3 text-start border rounded p-3">
+            {{ model.result_str|linebreaks }}
+        </div>
+        {% endif %}
+    </form>
+</div>
+
+<hr />
+
+{% endblock %}

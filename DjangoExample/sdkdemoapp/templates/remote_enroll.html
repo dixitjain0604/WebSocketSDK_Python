@@ -1,0 +1,43 @@
+{% extends "master.html" %}
+
+{% block title %}Remote Enroll{% endblock %}
+
+{% block content %}
+<p>
+    {% include 'navbar_control_device.html' %} /
+    <a href="{{ request.path }}">Remote Enroll</a>
+</p>
+
+<div class="text-center">
+    <h1 class="display-4">Remote Enroll</h1>
+</div>
+
+<hr />
+
+<div class="row">
+    <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+            <button type="submit" name="action_start" class="btn btn-outline-primary">Start</button>
+            <button type="submit" name="action_stop" class="btn btn-outline-primary">Stop</button>
+            <button type="submit" name="action_query" class="btn btn-outline-primary">Query Status</button>
+        </div>
+
+        {% if model.info_msg is not None %}
+        <div class="mb-3">
+            <div class="alert alert-info">{{ model.info_msg }}</div>
+        </div>
+        {% endif %}
+        {% if model.error_msg is not None %}
+        <div class="mb-3">
+            <div class="alert alert-danger">{{ model.error_msg }}</div>
+        </div>
+        {% endif %}
+
+        {{ form }}
+    </form>
+</div>
+
+<hr />
+
+{% endblock %}

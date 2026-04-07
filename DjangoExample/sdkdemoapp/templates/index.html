@@ -1,0 +1,28 @@
+{% extends "master.html" %}
+
+{% block title %}Web SDK Demo App{% endblock %}
+
+
+{% block content %}
+<p>
+    <a href="{{ request.path }}">Home</a>
+</p>
+
+<div class="text-center">
+    <h1 class="display-4">Web SDK Demo App</h1>
+</div>
+
+<p>
+    <a href="{% url 'online_devices' %}">Online Devices</a>
+</p>
+<p>
+    <a href="{% url 'manage_firmware' %}">Firmware Binaries</a>
+</p>
+<p>
+    <a href="{% url 'search_attend_logs' %}">Attendance Logs</a>
+</p>
+<p>
+    <a href="{% url 'search_management_logs' %}">Management Logs</a>
+</p>
+
+{% endblock %}

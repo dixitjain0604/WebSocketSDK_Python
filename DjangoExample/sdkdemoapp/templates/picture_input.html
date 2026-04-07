@@ -1,0 +1,30 @@
+<script>
+    $(function () {
+        var image = $("#{{ widget.attrs.id }}_picturePreview");
+        initializeBinaryEditor("{{ widget.attrs.id }}", "image.jpg", function (content) {
+            if (content.length > 0) {
+                var blob = new Blob([Base64Binary.decode(content)], { type: 'application/octet-stream' });
+                var link = URL.createObjectURL(blob);
+                image.prop("src", link);
+            }
+            else
+                image.prop("src", "");
+        });
+    });
+</script>
+
+<input type="text" id="{{ widget.attrs.id }}" name="{{ widget.name }}"{% if widget.value != None %} value="{{ widget.value|stringformat:'s' }}"{% endif %} readonly hidden />
+<div class="mb-2">
+    <div class="d-flex">
+        <div class="border border-secondary-subtle rounded-start p-1 flex-fill text-truncate" id="{{ widget.attrs.id }}_presentStatus"></div>
+        <div class="ms-auto">
+            <button type="button" class="btn rounded-0" id="{{ widget.attrs.id }}_downloadButton"
+                >Save to file</button><button type="button" class="btn rounded-0 btn-outline-primary" data-bs-toggle="modal" data-bs-target="#{{ widget.attrs.id }}Modal"
+                >Open file</button><button type="button" class="btn rounded-start-0" id="{{ widget.attrs.id }}_clearDataButton"
+                >Clear</button>
+        </div>
+    </div>
+</div>
+<div class="mb-2">
+    <img id="{{ widget.attrs.id }}_picturePreview" />
+</div>

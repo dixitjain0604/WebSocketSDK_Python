@@ -1,0 +1,44 @@
+{% extends "master.html" %}
+
+{% block title %}
+  Firmware Version
+{% endblock %}
+
+{% block content %}
+
+<p>
+    {% include 'navbar_control_device.html' %} /
+    <a href="{{ request.path }}">Firmware Version</a>
+</p>
+
+<div class="text-center">
+    <h1 class="display-4">Firmware Version</h1>
+</div>
+
+<p>
+    {% if model.info_msg is not None %}
+    <div class="mb-3">
+        <div class="alert alert-info">{{ model.info_msg }}</div>
+    </div>
+    {% endif %}
+    {% if model.error_msg is not None %}
+    <div class="mb-3">
+        <div class="alert alert-danger">{{ model.error_msg }}</div>
+    </div>
+    {% endif %}
+
+    <table class="table">
+        <tbody>
+            <tr>
+                <td>Version</td>
+                <td>{% if model.fw_version is not None %}{{ model.fw_version }}{% endif %}</td>
+            </tr>
+            <tr>
+                <td>Build Number</td>
+                <td>{% if model.fw_build_number is not None %}{{ model.fw_build_number }}{% endif %}</td>
+            </tr>
+        </tbody>
+    </table>
+</p>
+
+{% endblock %}

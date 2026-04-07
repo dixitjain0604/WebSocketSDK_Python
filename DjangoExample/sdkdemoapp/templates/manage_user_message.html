@@ -1,0 +1,44 @@
+{% extends "master.html" %}
+
+{% block title %}User Message Setting{% endblock %}
+
+{% block content %}
+<p>
+    {% include 'navbar_control_device.html' %} /
+    <a href="{{ request.path }}">User Message Setting</a>
+</p>
+
+<div class="text-center">
+    <h1 class="display-4">User Message Setting</h1>
+</div>
+
+<hr />
+
+<div class="row">
+    <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+            <button type="submit" name="action_get_user_message" class="btn btn-outline-primary">GetUserMessage</button>
+            <button type="submit" name="action_set_user_message" class="btn btn-outline-primary">SetUserMessage</button>
+            <button type="submit" name="action_get_message_color" class="btn btn-outline-primary">GetMessageColor</button>
+            <button type="submit" name="action_set_message_color" class="btn btn-outline-primary">SetMessageColor</button>
+        </div>
+
+        {% if model.info_msg is not None %}
+        <div class="mb-3">
+            <div class="alert alert-info">{{ model.info_msg }}</div>
+        </div>
+        {% endif %}
+        {% if model.error_msg is not None %}
+        <div class="mb-3">
+            <div class="alert alert-danger">{{ model.error_msg }}</div>
+        </div>
+        {% endif %}
+
+        {{ form }}
+    </form>
+</div>
+
+<hr />
+
+{% endblock %}

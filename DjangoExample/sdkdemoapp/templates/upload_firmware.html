@@ -1,0 +1,45 @@
+{% extends "master.html" %}
+{% load static %}
+
+{% block title %}Upload Firmware{% endblock %}
+
+{% block content %}
+<p>
+    {% include 'navbar_manage_firmware.html' %} /
+    <a href="{{ request.path }}">Upload Firmware</a>
+</p>
+
+<script src="{% static 'js/binary_data_editor.js' %}"></script>
+
+<div class="text-center">
+    <h1 class="display-4">Upload Firmware</h1>
+</div>
+
+<hr />
+
+<div class="row">
+    <form method="post">
+        {% csrf_token %}
+        {% if model.info_msg is not None %}
+        <div class="mb-3">
+            <div class="alert alert-info">{{ model.info_msg }}</div>
+        </div>
+        {% endif %}
+        {% if model.error_msg is not None %}
+        <div class="mb-3">
+            <div class="alert alert-danger">{{ model.error_msg }}</div>
+        </div>
+        {% endif %}
+
+        {{ form }}
+
+        <div class="mb-3">
+            <button type="submit" name="action_upload" class="btn btn-primary">OK</button>
+            <a class="btn btn-secondary" href="{% url 'manage_firmware' %}">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<hr />
+
+{% endblock %}
