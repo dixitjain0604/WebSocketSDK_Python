@@ -1,10 +1,10 @@
 [build]
 builder = "nixpacks"
 # collectstatic must run before gunicorn serves any request
-buildCommand = "pip install -r requirements.txt && cd DjangoExample && DJANGO_SETTINGS_MODULE=demosite.settings.production PYTHONPATH=../packages python manage.py collectstatic --noinput"
+buildCommand = "pip install -r requirements.txt && cd DjangoExample && DJANGO_SETTINGS_MODULE=demosite.settings.production PYTHONPATH=../packages python manage.py migrate --run-syncdb && DJANGO_SETTINGS_MODULE=demosite.settings.production PYTHONPATH=../packages python manage.py collectstatic --noinput"
 
 [deploy]
 startCommand = "python start_all.py"
 restartPolicyType = "always"
 healthcheckPath = "/"
-healthcheckTimeout = 60
+healthcheckTimeout = 300
