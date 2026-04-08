@@ -84,6 +84,26 @@ def shutdown(sig=None, frame=None):
 signal.signal(signal.SIGINT,  shutdown)
 signal.signal(signal.SIGTERM, shutdown)
 
+# ── collect static files (Railway only, idempotent) ──────────────────────────
+def run_collectstatic():
+    if not IS_RAILWAY:
+        return
+    log("STATIC", "Collecting static files…", CYAN)
+    env = os.environ.copy()
+    env["DJANGO_SETTINGS_MODULE"] = DJANGO_SETTINGS
+    env["PYTHONPATH"] = str(PKG_DIR)
+    result = subprocess.run(
+        [PYTHON, "manage.py", "collectstatic", "--noinput"],
+        cwd=DJANGO_DIR,
+        env=env,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode == 0:
+        log("STATIC", "Static files collected.", GREEN)
+    else:
+        log("STATIC", f"collectstatic warning:\n{result.stderr}", YELLOW)
+
 # ── apply Django migrations (idempotent) ──────────────────────────────────────
 def run_migrations():
     log("MIGRATE", "Applying database migrations…", CYAN)
@@ -204,6 +224,7 @@ if __name__ == "__main__":
     log("INFO", f"Python: {PYTHON}", CYAN)
     log("INFO", f"Base dir: {BASE_DIR}", CYAN)
 
+    run_collectstatic()
     run_migrations()
     start_broker()
     start_webapp()
