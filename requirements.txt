@@ -3,3 +3,4 @@ django-widget-tweaks==1.5.1
 gunicorn==21.2.0
 whitenoise==6.8.2
 requests
+websockets==16.0
