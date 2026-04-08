@@ -11,8 +11,28 @@ from .worker import WorkerHost
 
 LOG = logging.getLogger(__name__)
 
+async def health_check_handler(request):
+    """Handle HTTP health check requests from Railway or other platforms."""
+    # If it's a plain HTTP request with Connection: close (health check)
+    if request.headers.get("Connection") == "close":
+        return (
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Type: text/plain\r\n"
+            "Content-Length: 2\r\n"
+            "Connection: close\r\n"
+            "\r\n"
+            "OK"
+        )
+    # Otherwise, let WebSocket upgrade proceed normally
+    return None
+
 async def run_device_server(loadbalancer : LoadBalancer, host : str, port : int, cancellation : asyncio.Future):
-    async with serve(loadbalancer.serve_device, host, port) as server:
+    async with serve(
+        loadbalancer.serve_device,
+        host,
+        port,
+        process_request=health_check_handler
+    ) as server:
         await cancellation
 
 async def run_application_server(loadbalancer : LoadBalancer, sock_name : str):
