@@ -5,7 +5,8 @@ import multiprocessing as mp
 import multiprocessing.connection as mpc
 import signal
 from websockets.asyncio.server import serve
-from websockets.http import Response
+from websockets.http11 import Response
+from websockets.datastructures import Headers
 
 from .load_balancing import LoadBalancer
 from .worker import WorkerHost
@@ -17,7 +18,7 @@ async def health_check_handler(websocket, request):
     # If it's a plain HTTP request with Connection: close (health check)
     if request.headers.get("Connection") == "close":
         # Return a 200 OK HTTP response for health checks
-        return Response(status=200, headers={"Connection": "close"}, body=b"OK")
+        return Response(200, "OK", Headers([("Connection", "close")]), b"OK")
     # Otherwise, let WebSocket upgrade proceed normally
     return None
 
