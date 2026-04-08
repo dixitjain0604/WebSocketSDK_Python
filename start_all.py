@@ -27,7 +27,9 @@ else:
 # Railway sets PORT for the public-facing HTTP port; DeviceBroker stays on 8001
 IS_RAILWAY   = bool(os.environ.get("RAILWAY_ENVIRONMENT"))
 BROKER_PORT  = 8001
-WEBAPP_PORT  = int(os.environ.get("PORT", 8000))
+# Use DJANGO_PORT if set, otherwise PORT, otherwise 8000.
+# This avoids a conflict if Railway assigns PORT=8001 (the DeviceBroker port).
+WEBAPP_PORT  = int(os.environ.get("DJANGO_PORT", os.environ.get("PORT", 8000)))
 WEBAPP_URL   = f"http://127.0.0.1:{WEBAPP_PORT}"
 SYNC_SCRIPT  = BASE_DIR / "sync_engine.py"
 
