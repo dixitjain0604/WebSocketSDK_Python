@@ -11,7 +11,7 @@ from .worker import WorkerHost
 
 LOG = logging.getLogger(__name__)
 
-async def health_check_handler(request):
+async def health_check_handler(websocket, request):
     """Handle HTTP health check requests from Railway or other platforms."""
     # If it's a plain HTTP request with Connection: close (health check)
     if request.headers.get("Connection") == "close":
