@@ -1,28 +1,242 @@
 {% extends "master.html" %}
+{% block title %}Dashboard — {{ oem.app_name }}{% endblock %}
 
-{% block title %}Web SDK Demo App{% endblock %}
+{% block header %}
+<style>
+  .dash-section-title {
+    font-size: .7rem;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: #6c757d;
+    margin-bottom: 1rem;
+    padding-bottom: .35rem;
+    border-bottom: 1px solid #dee2e6;
+  }
+  .dash-card {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    border-radius: .75rem;
+    border: 1px solid #e8eaed;
+    background: #fff;
+    padding: 1.4rem 1.5rem;
+    text-decoration: none;
+    color: inherit;
+    transition: box-shadow .15s ease, transform .15s ease;
+  }
+  .dash-card:hover {
+    box-shadow: 0 6px 24px rgba(0,0,0,.09);
+    transform: translateY(-2px);
+    color: inherit;
+    text-decoration: none;
+  }
+  .dash-card .icon-wrap {
+    width: 48px;
+    height: 48px;
+    border-radius: .6rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.45rem;
+    margin-bottom: 1rem;
+    flex-shrink: 0;
+  }
+  .dash-card .card-label {
+    font-weight: 600;
+    font-size: .95rem;
+    margin-bottom: .25rem;
+  }
+  .dash-card .card-desc {
+    font-size: .8rem;
+    color: #6c757d;
+    line-height: 1.4;
+    flex-grow: 1;
+  }
+  .dash-card .card-arrow {
+    font-size: .8rem;
+    margin-top: .85rem;
+    color: var(--oem-primary, #0d6efd);
+    font-weight: 500;
+  }
 
+  /* colour variants for icon backgrounds */
+  .ic-blue   { background: #dbeafe; color: #1d4ed8; }
+  .ic-indigo { background: #ede9fe; color: #6d28d9; }
+  .ic-green  { background: #dcfce7; color: #16a34a; }
+  .ic-teal   { background: #ccfbf1; color: #0f766e; }
+  .ic-yellow { background: #fef9c3; color: #a16207; }
+  .ic-orange { background: #ffedd5; color: #c2410c; }
+  .ic-red    { background: #fee2e2; color: #b91c1c; }
+  .ic-purple { background: #f3e8ff; color: #7e22ce; }
+  .ic-gray   { background: #f1f5f9; color: #475569; }
+  .ic-pink   { background: #fce7f3; color: #be185d; }
+
+  .greeting-bar {
+    background: linear-gradient(135deg, var(--oem-primary, #0d6efd) 0%, #6610f2 100%);
+    border-radius: 1rem;
+    color: #fff;
+    padding: 2rem 2.5rem;
+    margin-bottom: 2.5rem;
+  }
+  .greeting-bar h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: .25rem; }
+  .greeting-bar p  { opacity: .85; margin: 0; font-size: .95rem; }
+  .greeting-bar .bi { font-size: 3.5rem; opacity: .25; }
+</style>
+{% endblock %}
 
 {% block content %}
-<p>
-    <a href="{{ request.path }}">Home</a>
-</p>
+<div class="py-2">
 
-<div class="text-center">
-    <h1 class="display-4">Web SDK Demo App</h1>
+  <!-- Greeting bar -->
+  <div class="greeting-bar d-flex align-items-center justify-content-between flex-wrap gap-3">
+    <div>
+      <h1><i class="bi bi-cpu me-2"></i>Device Management</h1>
+      <p>Monitor devices, manage employees, sync biometrics and review logs — all from one place.</p>
+    </div>
+    <i class="bi bi-hdd-network d-none d-md-block"></i>
+  </div>
+
+  <!-- Section: Devices -->
+  <p class="dash-section-title"><i class="bi bi-router me-1"></i>Devices</p>
+  <div class="row g-3 mb-4">
+
+    <div class="col-sm-6 col-lg-3">
+      <a href="{% url 'online_devices' %}" class="dash-card">
+        <div class="icon-wrap ic-green"><i class="bi bi-wifi"></i></div>
+        <div class="card-label">Online Devices</div>
+        <div class="card-desc">View all devices currently connected to the broker in real time.</div>
+        <div class="card-arrow">Open <i class="bi bi-arrow-right"></i></div>
+      </a>
+    </div>
+
+    <div class="col-sm-6 col-lg-3">
+      <a href="{% url 'device_registry_list' %}" class="dash-card">
+        <div class="icon-wrap ic-blue"><i class="bi bi-hdd-stack"></i></div>
+        <div class="card-label">Device Registry</div>
+        <div class="card-desc">Register devices, assign zones and manage authentication tokens.</div>
+        <div class="card-arrow">Open <i class="bi bi-arrow-right"></i></div>
+      </a>
+    </div>
+
+    <div class="col-sm-6 col-lg-3">
+      <a href="{% url 'zone_list' %}" class="dash-card">
+        <div class="icon-wrap ic-teal"><i class="bi bi-diagram-3"></i></div>
+        <div class="card-label">Zones / Areas</div>
+        <div class="card-desc">Group devices into access zones and trigger zone-wide user sync.</div>
+        <div class="card-arrow">Open <i class="bi bi-arrow-right"></i></div>
+      </a>
+    </div>
+
+    <div class="col-sm-6 col-lg-3">
+      <a href="{% url 'device_connection_logs' %}" class="dash-card">
+        <div class="icon-wrap ic-gray"><i class="bi bi-plug"></i></div>
+        <div class="card-label">Connection Logs</div>
+        <div class="card-desc">History of device connect and disconnect events with timestamps.</div>
+        <div class="card-arrow">Open <i class="bi bi-arrow-right"></i></div>
+      </a>
+    </div>
+
+  </div>
+
+  <!-- Section: People -->
+  <p class="dash-section-title"><i class="bi bi-people me-1"></i>People &amp; Access</p>
+  <div class="row g-3 mb-4">
+
+    <div class="col-sm-6 col-lg-3">
+      <a href="{% url 'employee_list' %}" class="dash-card">
+        <div class="icon-wrap ic-indigo"><i class="bi bi-person-badge"></i></div>
+        <div class="card-label">Employees</div>
+        <div class="card-desc">Add, edit or remove employees. Changes are auto-pushed to all connected devices.</div>
+        <div class="card-arrow">Open <i class="bi bi-arrow-right"></i></div>
+      </a>
+    </div>
+
+    <div class="col-sm-6 col-lg-3">
+      <a href="{% url 'sync_users' %}" class="dash-card">
+        <div class="icon-wrap ic-purple"><i class="bi bi-arrow-repeat"></i></div>
+        <div class="card-label">Sync Users</div>
+        <div class="card-desc">Manually trigger a bidirectional sync of employee data across selected devices.</div>
+        <div class="card-arrow">Open <i class="bi bi-arrow-right"></i></div>
+      </a>
+    </div>
+
+    <div class="col-sm-6 col-lg-3">
+      <a href="{% url 'interlock_status' %}" class="dash-card">
+        <div class="icon-wrap ic-yellow"><i class="bi bi-shield-lock"></i></div>
+        <div class="card-label">Interlock</div>
+        <div class="card-desc">When someone punches in at one device, access is blocked on all other interlock-enabled devices.</div>
+        <div class="card-arrow">Open <i class="bi bi-arrow-right"></i></div>
+      </a>
+    </div>
+
+    <div class="col-sm-6 col-lg-3">
+      <a href="{% url 'manage_firmware' %}" class="dash-card">
+        <div class="icon-wrap ic-orange"><i class="bi bi-cloud-arrow-up"></i></div>
+        <div class="card-label">Firmware</div>
+        <div class="card-desc">Upload and push firmware binaries to devices over the air.</div>
+        <div class="card-arrow">Open <i class="bi bi-arrow-right"></i></div>
+      </a>
+    </div>
+
+  </div>
+
+  <!-- Section: Logs -->
+  <p class="dash-section-title"><i class="bi bi-journal-text me-1"></i>Logs &amp; Reports</p>
+  <div class="row g-3 mb-4">
+
+    <div class="col-sm-6 col-lg-4">
+      <a href="{% url 'search_attend_logs' %}" class="dash-card">
+        <div class="icon-wrap ic-green"><i class="bi bi-calendar2-check"></i></div>
+        <div class="card-label">Attendance Logs</div>
+        <div class="card-desc">Search and filter employee punch records. Filter by device, date range or employee ID.</div>
+        <div class="card-arrow">Open <i class="bi bi-arrow-right"></i></div>
+      </a>
+    </div>
+
+    <div class="col-sm-6 col-lg-4">
+      <a href="{% url 'search_management_logs' %}" class="dash-card">
+        <div class="icon-wrap ic-red"><i class="bi bi-clipboard2-data"></i></div>
+        <div class="card-label">Management Logs</div>
+        <div class="card-desc">Audit trail of configuration changes, sync operations and admin actions.</div>
+        <div class="card-arrow">Open <i class="bi bi-arrow-right"></i></div>
+      </a>
+    </div>
+
+    <div class="col-sm-6 col-lg-4">
+      <a href="{% url 'download_logs_csv' %}" class="dash-card">
+        <div class="icon-wrap ic-teal"><i class="bi bi-filetype-csv"></i></div>
+        <div class="card-label">Export CSV</div>
+        <div class="card-desc">Download attendance logs as a CSV file with optional date and device filters.</div>
+        <div class="card-arrow">Open <i class="bi bi-arrow-right"></i></div>
+      </a>
+    </div>
+
+  </div>
+
+  <!-- Section: System -->
+  <p class="dash-section-title"><i class="bi bi-gear me-1"></i>System</p>
+  <div class="row g-3 mb-2">
+
+    <div class="col-sm-6 col-lg-4">
+      <a href="{% url 'api_key_list' %}" class="dash-card">
+        <div class="icon-wrap ic-pink"><i class="bi bi-key"></i></div>
+        <div class="card-label">API Keys</div>
+        <div class="card-desc">Generate and manage API keys for third-party software integration via REST.</div>
+        <div class="card-arrow">Open <i class="bi bi-arrow-right"></i></div>
+      </a>
+    </div>
+
+    <div class="col-sm-6 col-lg-4">
+      <a href="{% url 'oem_settings' %}" class="dash-card">
+        <div class="icon-wrap ic-gray"><i class="bi bi-palette"></i></div>
+        <div class="card-label">OEM / Branding</div>
+        <div class="card-desc">Customise the app name, logo, navbar colours and footer for your brand.</div>
+        <div class="card-arrow">Open <i class="bi bi-arrow-right"></i></div>
+      </a>
+    </div>
+
+  </div>
+
 </div>
-
-<p>
-    <a href="{% url 'online_devices' %}">Online Devices</a>
-</p>
-<p>
-    <a href="{% url 'manage_firmware' %}">Firmware Binaries</a>
-</p>
-<p>
-    <a href="{% url 'search_attend_logs' %}">Attendance Logs</a>
-</p>
-<p>
-    <a href="{% url 'search_management_logs' %}">Management Logs</a>
-</p>
-
 {% endblock %}
