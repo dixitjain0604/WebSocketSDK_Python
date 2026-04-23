@@ -30,8 +30,8 @@
             <div class="container">
                 <a class="navbar-brand fw-semibold" href="{% url 'index' %}"
                    style="color: {{ oem.navbar_text_color }};">
-                    {% if oem.logo_url %}
-                        <img src="{{ oem.logo_url }}" height="28" class="me-2 align-middle">
+                    {% if oem.logo %}
+                        <img src="{{ oem.logo.url }}" height="28" class="me-2 align-middle">
                     {% endif %}
                     {{ oem.app_name }}
                 </a>

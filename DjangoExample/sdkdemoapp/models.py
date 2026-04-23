@@ -45,7 +45,7 @@ class OEMSettings(models.Model):
     navbar_color    = models.CharField(max_length=32,  default='#ffffff')
     navbar_text_color = models.CharField(max_length=32, default='#212529')
     primary_color   = models.CharField(max_length=32,  default='#0d6efd')
-    logo_url        = models.CharField(max_length=512, default='', blank=True)
+    logo            = models.FileField(upload_to='oem/', blank=True)
     footer_text     = models.CharField(max_length=256, default='© 2025')
 
     class Meta:

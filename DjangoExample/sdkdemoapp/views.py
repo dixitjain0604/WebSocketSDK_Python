@@ -141,10 +141,23 @@ def oem_settings(request: HttpRequest):
         oem.navbar_color      = request.POST.get('navbar_color', oem.navbar_color).strip()
         oem.navbar_text_color = request.POST.get('navbar_text_color', oem.navbar_text_color).strip()
         oem.primary_color     = request.POST.get('primary_color', oem.primary_color).strip()
-        oem.logo_url          = request.POST.get('logo_url', '').strip()
         oem.footer_text       = request.POST.get('footer_text', oem.footer_text).strip()
-        oem.save()
-        success = True
+        if request.POST.get('remove_logo'):
+            if oem.logo:
+                oem.logo.delete(save=False)
+            oem.logo = None
+        elif 'logo' in request.FILES:
+            uploaded = request.FILES['logo']
+            allowed = {'image/svg+xml', 'image/jpeg', 'image/png', 'application/pdf'}
+            if uploaded.content_type not in allowed:
+                error = 'Unsupported file type. Please upload SVG, JPEG, PNG, or PDF.'
+            else:
+                if oem.logo:
+                    oem.logo.delete(save=False)
+                oem.logo = uploaded
+        if not error:
+            oem.save()
+            success = True
 
     template = loader.get_template('oem_settings.html')
     return HttpResponse(template.render({'oem': oem, 'success': success, 'error': error}, request))
