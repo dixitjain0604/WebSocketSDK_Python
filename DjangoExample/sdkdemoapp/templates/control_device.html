@@ -106,7 +106,12 @@
 <p>
     <a href="{% url 'clear_data' connection_id=connection_id %}">Clear Data</a> |
     <a href="{% url 'firmware_version' connection_id=connection_id %}">Firmware Version</a> |
-    <a href="{% url 'write_firmware' connection_id=connection_id %}">Write Firmware</a>
+    <a href="{% url 'write_firmware' connection_id=connection_id %}">Write Firmware</a> |
+    <a href="{% url 'bulk_download_logs' connection_id=connection_id %}">Bulk Download Logs</a> |
+    <button class="btn btn-sm btn-warning"
+            onclick="if(confirm('Restart this device?')) fetch('{% url 'restart_device' connection_id=connection_id %}').then(r=>r.json()).then(d=>alert(d.ok?'Restart sent':'Error: '+d.error))">
+        Restart Device
+    </button>
 </p>
 
 <hr />

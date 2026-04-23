@@ -1,0 +1,51 @@
+{% extends "master.html" %}
+{% block title %}API Keys{% endblock %}
+{% block content %}
+<h2>API Keys for External Integration</h2>
+<p class="text-muted">Use these keys to authenticate with the REST API. Pass as <code>X-API-Key</code> header or <code>?api_key=</code> query param.</p>
+<hr>
+<h5>Available Endpoints</h5>
+<ul>
+    <li><code>GET /api/v1/devices/</code> — List online devices</li>
+    <li><code>GET/POST /api/v1/employees/</code> — List or create employees</li>
+    <li><code>GET/PUT/DELETE /api/v1/employees/&lt;id&gt;/</code> — Employee detail</li>
+    <li><code>GET /api/v1/logs/</code> — Query attendance logs (params: device_id, user_id, start, end)</li>
+    <li><code>POST /api/v1/sync/</code> — Trigger sync (body: {"host","targets","mode"})</li>
+</ul>
+<hr>
+<form method="post" class="mb-4">
+    {% csrf_token %}
+    <div class="input-group">
+        <input type="text" name="name" class="form-control" placeholder="Key name (e.g., HR Software)" required>
+        <button type="submit" class="btn btn-primary">Generate New Key</button>
+    </div>
+</form>
+
+<table class="table table-bordered">
+    <thead class="table-light">
+        <tr><th>Name</th><th>Key</th><th>Status</th><th>Last Used</th><th>Actions</th></tr>
+    </thead>
+    <tbody>
+    {% for key in keys %}
+        <tr class="{% if not key.is_active %}table-secondary{% endif %}">
+            <td>{{ key.name }}</td>
+            <td><code>{{ key.key }}</code></td>
+            <td>{% if key.is_active %}<span class="badge bg-success">Active</span>{% else %}<span class="badge bg-danger">Disabled</span>{% endif %}</td>
+            <td>{{ key.last_used|default:"Never" }}</td>
+            <td>
+                <a class="btn btn-sm btn-outline-warning" href="{% url 'api_key_toggle' key_id=key.pk %}">
+                    {% if key.is_active %}Disable{% else %}Enable{% endif %}
+                </a>
+                <form method="post" action="{% url 'api_key_delete' key_id=key.pk %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-danger"
+                            onclick="return confirm('Delete this key?')">Delete</button>
+                </form>
+            </td>
+        </tr>
+    {% empty %}
+        <tr><td colspan="5" class="text-muted">No API keys yet.</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

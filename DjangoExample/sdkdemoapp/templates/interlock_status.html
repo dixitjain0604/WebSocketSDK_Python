@@ -1,0 +1,52 @@
+{% extends "master.html" %}
+{% block title %}Interlock Status{% endblock %}
+{% block content %}
+<h2>Interlock Status</h2>
+<p class="text-muted">
+    Interlock: when an employee punches in on an interlock-enabled device, access is automatically denied
+    on all other interlock-enabled devices until they physically punch on another device.
+</p>
+
+<h5>Device Interlock Configuration</h5>
+<table class="table table-bordered table-sm mb-4">
+    <thead class="table-light">
+        <tr><th>Device</th><th>Zone</th><th>Interlock</th><th>Action</th></tr>
+    </thead>
+    <tbody>
+    {% for dev in devices %}
+        <tr>
+            <td><code>{{ dev.serial_number }}</code> {{ dev.friendly_name }}</td>
+            <td>{{ dev.zone.name|default:"-" }}</td>
+            <td>{% if dev.interlock_enabled %}<span class="badge bg-warning text-dark">ON</span>{% else %}<span class="badge bg-secondary">OFF</span>{% endif %}</td>
+            <td>
+                <a class="btn btn-sm btn-outline-{% if dev.interlock_enabled %}danger{% else %}success{% endif %}"
+                   href="{% url 'interlock_toggle_device' device_id=dev.pk %}">
+                    {% if dev.interlock_enabled %}Disable{% else %}Enable{% endif %}
+                </a>
+            </td>
+        </tr>
+    {% empty %}
+        <tr><td colspan="4" class="text-muted">No devices registered. <a href="{% url 'device_registry_list' %}">Go to Device Registry</a></td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+<h5>Recent Interlock Events</h5>
+<table class="table table-bordered table-sm">
+    <thead class="table-light">
+        <tr><th>Employee ID</th><th>Punched Device</th><th>Punch Time</th><th>Active</th></tr>
+    </thead>
+    <tbody>
+    {% for state in states %}
+        <tr>
+            <td>{{ state.employee_id }}</td>
+            <td><code>{{ state.punched_device }}</code></td>
+            <td>{{ state.punch_time }}</td>
+            <td>{% if state.interlock_active %}<span class="badge bg-warning text-dark">Active</span>{% else %}<span class="badge bg-secondary">Cleared</span>{% endif %}</td>
+        </tr>
+    {% empty %}
+        <tr><td colspan="4" class="text-muted">No interlock events recorded yet.</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

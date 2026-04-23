@@ -1,0 +1,43 @@
+{% extends "master.html" %}
+{% block title %}{{ action }} Device{% endblock %}
+{% block content %}
+<h2>{{ action }} Device</h2>
+{% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+<form method="post">
+    {% csrf_token %}
+    <div class="mb-3">
+        <label class="form-label">Serial Number *</label>
+        <input type="text" name="serial_number" class="form-control"
+               value="{{ dev.serial_number|default:'' }}" {% if action == 'Edit' %}readonly{% endif %} required>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Friendly Name</label>
+        <input type="text" name="friendly_name" class="form-control" value="{{ dev.friendly_name|default:'' }}">
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Location</label>
+        <input type="text" name="location" class="form-control" value="{{ dev.location|default:'' }}">
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Zone</label>
+        <select name="zone" class="form-select">
+            <option value="">-- None --</option>
+            {% for z in zones %}
+                <option value="{{ z.pk }}" {% if dev.zone_id == z.pk %}selected{% endif %}>{{ z.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="mb-3 form-check">
+        <input type="checkbox" name="is_active" class="form-check-input" id="is_active"
+               {% if dev.is_active|default:True %}checked{% endif %}>
+        <label class="form-check-label" for="is_active">Active (allows device to login)</label>
+    </div>
+    <div class="mb-3 form-check">
+        <input type="checkbox" name="interlock_enabled" class="form-check-input" id="interlock_enabled"
+               {% if dev.interlock_enabled %}checked{% endif %}>
+        <label class="form-check-label" for="interlock_enabled">Enable Interlock (deny access on other interlock devices after punch)</label>
+    </div>
+    <button type="submit" class="btn btn-primary">Save</button>
+    <a href="{% url 'device_registry_list' %}" class="btn btn-secondary ms-2">Cancel</a>
+</form>
+{% endblock %}

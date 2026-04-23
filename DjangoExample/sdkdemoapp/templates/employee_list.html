@@ -1,0 +1,50 @@
+{% extends "master.html" %}
+{% block title %}Employees{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Employees</h2>
+    <a class="btn btn-primary" href="{% url 'employee_create' %}">+ Add Employee</a>
+</div>
+<p class="text-muted">Adding/editing an employee here automatically pushes the data to all currently connected devices.</p>
+<table class="table table-bordered table-hover">
+    <thead class="table-light">
+        <tr>
+            <th>ID</th><th>Name</th><th>Department</th><th>Privilege</th>
+            <th>Enabled</th><th>Card</th><th>Period</th><th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for emp in employees %}
+        <tr class="{% if not emp.enabled %}table-secondary{% endif %}">
+            <td>{{ emp.employee_id }}</td>
+            <td>{{ emp.name }}</td>
+            <td>{{ emp.department }}</td>
+            <td>{% if emp.privilege == 0 %}User{% elif emp.privilege == 1 %}Manager{% else %}Admin{% endif %}</td>
+            <td>
+                {% if emp.enabled %}
+                    <span class="badge bg-success">Yes</span>
+                {% else %}
+                    <span class="badge bg-danger">No</span>
+                {% endif %}
+            </td>
+            <td>{{ emp.card|default:"-" }}</td>
+            <td>
+                {% if emp.period_start and emp.period_end %}
+                    {{ emp.period_start }} → {{ emp.period_end }}
+                {% else %}-{% endif %}
+            </td>
+            <td>
+                <a class="btn btn-sm btn-outline-secondary" href="{% url 'employee_edit' employee_id=emp.pk %}">Edit</a>
+                <a class="btn btn-sm btn-outline-{% if emp.enabled %}warning{% else %}success{% endif %}"
+                   href="{% url 'employee_enable_disable' employee_id=emp.pk %}">
+                    {% if emp.enabled %}Disable{% else %}Enable{% endif %}
+                </a>
+                <a class="btn btn-sm btn-outline-danger" href="{% url 'employee_delete' employee_id=emp.pk %}">Delete</a>
+            </td>
+        </tr>
+    {% empty %}
+        <tr><td colspan="8" class="text-muted">No employees added yet.</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

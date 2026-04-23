@@ -1,0 +1,29 @@
+{% extends "master.html" %}
+{% block title %}Zone / Area Management{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Zones / Areas</h2>
+    <a class="btn btn-primary" href="{% url 'zone_create' %}">+ New Zone</a>
+</div>
+<table class="table table-bordered">
+    <thead class="table-light">
+        <tr><th>Name</th><th>Description</th><th>Devices</th><th>Actions</th></tr>
+    </thead>
+    <tbody>
+    {% for zone in zones %}
+        <tr>
+            <td>{{ zone.name }}</td>
+            <td>{{ zone.description }}</td>
+            <td>{{ zone.devices.count }}</td>
+            <td>
+                <a class="btn btn-sm btn-outline-secondary" href="{% url 'zone_edit' zone_id=zone.pk %}">Edit</a>
+                <a class="btn btn-sm btn-outline-success" href="{% url 'zone_sync' zone_id=zone.pk %}">Sync</a>
+                <a class="btn btn-sm btn-outline-danger" href="{% url 'zone_delete' zone_id=zone.pk %}">Delete</a>
+            </td>
+        </tr>
+    {% empty %}
+        <tr><td colspan="4" class="text-muted">No zones defined.</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

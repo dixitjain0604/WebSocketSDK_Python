@@ -1,0 +1,45 @@
+{% extends "master.html" %}
+{% block title %}Device Registry{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Device Registry</h2>
+    <div>
+        <a class="btn btn-outline-secondary me-2" href="{% url 'device_connection_logs' %}">Connection Logs</a>
+        <a class="btn btn-primary" href="{% url 'device_registry_create' %}">+ Add Device</a>
+    </div>
+</div>
+<table class="table table-bordered table-hover">
+    <thead class="table-light">
+        <tr>
+            <th>Serial Number</th><th>Name</th><th>Zone</th><th>Location</th>
+            <th>Status</th><th>Interlock</th><th>Last Seen</th><th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for dev in devices %}
+        <tr class="{% if not dev.is_active %}table-secondary{% endif %}">
+            <td><code>{{ dev.serial_number }}</code></td>
+            <td>{{ dev.friendly_name|default:"-" }}</td>
+            <td>{{ dev.zone.name|default:"-" }}</td>
+            <td>{{ dev.location|default:"-" }}</td>
+            <td>
+                {% if dev.serial_number in online_ids %}
+                    <span class="badge bg-success">Online</span>
+                {% else %}
+                    <span class="badge bg-secondary">Offline</span>
+                {% endif %}
+                {% if not dev.is_active %}<span class="badge bg-danger ms-1">Disabled</span>{% endif %}
+            </td>
+            <td>{% if dev.interlock_enabled %}<span class="badge bg-warning text-dark">ON</span>{% else %}-{% endif %}</td>
+            <td>{{ dev.last_seen|default:"-" }}</td>
+            <td>
+                <a class="btn btn-sm btn-outline-secondary" href="{% url 'device_registry_edit' device_id=dev.pk %}">Edit</a>
+                <a class="btn btn-sm btn-outline-danger" href="{% url 'device_registry_delete' device_id=dev.pk %}">Delete</a>
+            </td>
+        </tr>
+    {% empty %}
+        <tr><td colspan="8" class="text-muted">No devices registered. Devices auto-register on first connection.</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

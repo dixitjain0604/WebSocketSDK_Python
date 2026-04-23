@@ -1,0 +1,19 @@
+{% extends "master.html" %}
+{% block title %}Sync Zone: {{ zone.name }}{% endblock %}
+{% block content %}
+<h2>Sync Zone: {{ zone.name }}</h2>
+<p class="text-muted">Bidirectionally sync all online devices in this zone. Devices in this zone: <strong>{{ zone_serials|join:", " }}</strong></p>
+{% if error_msg %}<div class="alert alert-danger">{{ error_msg }}</div>{% endif %}
+{% if success_msg %}<div class="alert alert-success">{{ success_msg }}</div>{% endif %}
+<form method="post">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-primary">Start Zone Sync</button>
+    <a href="{% url 'zone_list' %}" class="btn btn-secondary ms-2">Back</a>
+</form>
+{% if sync_log %}
+<hr>
+<h5>Sync Log</h5>
+<pre class="bg-light p-3 border rounded" style="max-height:400px;overflow-y:auto;">{% for line in sync_log %}{{ line }}
+{% endfor %}</pre>
+{% endif %}
+{% endblock %}

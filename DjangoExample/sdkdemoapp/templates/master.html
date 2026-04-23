@@ -50,17 +50,37 @@
                             <a class="nav-link" href="{% url 'online_devices' %}"
                                style="color: {{ oem.navbar_text_color }};">Online Devices</a>
                         </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown"
+                               style="color: {{ oem.navbar_text_color }};">Manage</a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="{% url 'device_registry_list' %}">Device Registry</a></li>
+                                <li><a class="dropdown-item" href="{% url 'zone_list' %}">Zones / Areas</a></li>
+                                <li><a class="dropdown-item" href="{% url 'employee_list' %}">Employees</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{% url 'sync_users' %}">Sync Users</a></li>
+                                <li><a class="dropdown-item" href="{% url 'interlock_status' %}">Interlock Status</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{% url 'device_connection_logs' %}">Connection Logs</a></li>
+                            </ul>
+                        </li>
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'manage_firmware' %}"
-                               style="color: {{ oem.navbar_text_color }};">Firmware Binaries</a>
+                               style="color: {{ oem.navbar_text_color }};">Firmware</a>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown"
+                               style="color: {{ oem.navbar_text_color }};">Logs</a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="{% url 'search_attend_logs' %}">Attendance Logs</a></li>
+                                <li><a class="dropdown-item" href="{% url 'search_management_logs' %}">Management Logs</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{% url 'download_logs_csv' %}">Export CSV</a></li>
+                            </ul>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'search_attend_logs' %}"
-                               style="color: {{ oem.navbar_text_color }};">Attendance Logs</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'search_management_logs' %}"
-                               style="color: {{ oem.navbar_text_color }};">Management Logs</a>
+                            <a class="nav-link" href="{% url 'api_key_list' %}"
+                               style="color: {{ oem.navbar_text_color }};">API Keys</a>
                         </li>
                     </ul>
 

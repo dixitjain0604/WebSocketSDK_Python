@@ -30,7 +30,7 @@ class Migration(migrations.Migration):
                 ('longitude', models.CharField(blank=True, max_length=256, null=True)),
             ],
             options={
-                'constraints': [models.UniqueConstraint(fields=('device_id', 'log_id'), name='device_log_id', nulls_distinct=False)],
+                'constraints': [models.UniqueConstraint(fields=('device_id', 'log_id'), name='device_log_id')],
             },
         ),
     ]

@@ -1,0 +1,10 @@
+{% extends "master.html" %}
+{% block title %}Delete Device{% endblock %}
+{% block content %}
+<h2>Delete Device: {{ dev.serial_number }}</h2>
+<div class="alert alert-warning">This will remove the device record. The device can reconnect and re-register automatically.</div>
+<form method="post">{% csrf_token %}
+    <button type="submit" class="btn btn-danger">Delete</button>
+    <a href="{% url 'device_registry_list' %}" class="btn btn-secondary ms-2">Cancel</a>
+</form>
+{% endblock %}

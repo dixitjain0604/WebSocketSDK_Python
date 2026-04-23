@@ -1,13 +1,15 @@
+import csv
 import json
 import secrets
-from sqlite3 import connect
 from typing import Optional
 import urllib
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from django.template import loader
-from django.http import HttpRequest, HttpResponse, HttpResponseBadRequest, HttpResponseNotFound, HttpResponseRedirect, JsonResponse
-from django.urls import is_valid_path, reverse
+from django.db.models import F
+from django.http import HttpRequest, HttpResponse, HttpResponseBadRequest, HttpResponseNotFound, HttpResponseRedirect, JsonResponse, StreamingHttpResponse
+from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
+from django.utils import timezone
 import requests
 
 from .biz import devices, users, faces, fingerprints, misc_creds, user_photo, user_attend_only, user_message, user_german
@@ -17,21 +19,108 @@ from . import forms
 from . import models
 
 @csrf_exempt
-def check_device_registration(request : HttpRequest):
-    return JsonResponse({
-        "token": secrets.token_hex(16)
-    })
+def check_device_registration(request: HttpRequest):
+    data = json.loads(request.body) if request.body else {}
+    sn = data.get("sn", "")
+    terminal_type = data.get("terminal_type", "")
+    product_name = data.get("product_name", "")
+
+    if not sn:
+        return JsonResponse({"token": ""}, status=400)
+
+    reg, _ = models.DeviceRegistry.objects.get_or_create(serial_number=sn)
+    reg.terminal_type = terminal_type or reg.terminal_type
+    reg.product_name = product_name or reg.product_name
+    if not reg.token:
+        reg.token = secrets.token_hex(16)
+    reg.save()
+    return JsonResponse({"token": reg.token})
 
 @csrf_exempt
-def check_device_login(request : HttpRequest):
+def check_device_login(request: HttpRequest):
+    data = json.loads(request.body) if request.body else {}
+    sn = data.get("sn", "")
+    token = data.get("token", "")
+
+    if not sn or not token:
+        return JsonResponse({"reason": "Missing SN or token"}, status=403)
+
+    try:
+        reg = models.DeviceRegistry.objects.get(serial_number=sn)
+        if not reg.is_active:
+            return JsonResponse({"reason": "Device disabled"}, status=403)
+        if reg.token != token:
+            return JsonResponse({"reason": "Invalid token"}, status=403)
+        reg.last_seen = timezone.now()
+        reg.save(update_fields=["last_seen"])
+        return JsonResponse({})
+    except models.DeviceRegistry.DoesNotExist:
+        return JsonResponse({"reason": "Unknown device"}, status=403)
+
+@csrf_exempt
+def connection_event(request: HttpRequest):
+    data = json.loads(request.body) if request.body else {}
+    device_id = data.get("device_id", "")
+    event = data.get("event", "")
+    if device_id and event in (models.DeviceConnectionLog.CONNECT, models.DeviceConnectionLog.DISCONNECT):
+        models.DeviceConnectionLog.objects.create(device_id=device_id, event=event)
+        if event == models.DeviceConnectionLog.CONNECT:
+            terminal_type = data.get("terminal_type", "")
+            product_name = data.get("product_name", "")
+            update_fields = {"last_seen": timezone.now()}
+            if terminal_type:
+                update_fields["terminal_type"] = terminal_type
+            if product_name:
+                update_fields["product_name"] = product_name
+            models.DeviceRegistry.objects.filter(serial_number=device_id).update(**update_fields)
     return JsonResponse({})
 
 @csrf_exempt
-def upload_device_log(request : HttpRequest):
+def upload_device_log(request: HttpRequest):
     from .biz.log_upload import save_device_log
     contents = json.loads(request.body)
     save_device_log(contents)
-    return JsonResponse({})
+
+    interlock_devices = []
+    log_type = request.GET.get("type", "")
+    if log_type in ("TimeLog", "TimeLog_v2"):
+        user_id_str = contents.get("UserID", "")
+        punched_device = contents.get("_device_id", "")
+        client_id = contents.get("_client_id", None)
+        if user_id_str and punched_device:
+            try:
+                uid = int(user_id_str)
+                interlock_devices = _process_interlock(uid, punched_device, client_id)
+            except (ValueError, TypeError):
+                pass
+
+    return JsonResponse({"interlock_devices": interlock_devices})
+
+
+def _process_interlock(employee_id: int, punched_device: str, punched_client_id) -> list:
+    """Return list of client_ids of OTHER interlock-enabled devices where user should be denied."""
+    if not models.DeviceRegistry.objects.filter(serial_number=punched_device, interlock_enabled=True).exists():
+        return []
+
+    models.InterlockState.objects.update_or_create(
+        employee_id=employee_id,
+        defaults={"punched_device": punched_device, "punch_time": timezone.now(), "interlock_active": True}
+    )
+
+    interlock_serials = list(models.DeviceRegistry.objects.filter(
+        interlock_enabled=True
+    ).exclude(serial_number=punched_device).values_list("serial_number", flat=True))
+
+    if not interlock_serials:
+        return []
+
+    try:
+        from .biz import connection as biz_connection
+        with biz_connection.open() as c:
+            online = c.get_all_online_devices()
+        return [d.connection_id for d in online if d.device_id in interlock_serials]
+    except Exception:
+        return []
 
 def index(request : HttpRequest):
     template = loader.get_template('index.html')
@@ -879,175 +968,607 @@ def manage_user_german(request : HttpRequest, connection_id : int):
         request))
 
 
+# ─── Zone Management ──────────────────────────────────────────────────────────
 
-    from django.template import loader
-    from django.http import HttpResponse
+def zone_list(request: HttpRequest):
+    zones = models.Zone.objects.prefetch_related("devices").all()
+    return HttpResponse(loader.get_template("zone_list.html").render({"zones": zones}, request))
+
+def zone_create(request: HttpRequest):
+    error = None
+    if request.method == "POST":
+        name = request.POST.get("name", "").strip()
+        description = request.POST.get("description", "").strip()
+        if not name:
+            error = "Name is required."
+        elif models.Zone.objects.filter(name=name).exists():
+            error = "A zone with this name already exists."
+        else:
+            models.Zone.objects.create(name=name, description=description)
+            return HttpResponseRedirect(reverse("zone_list"))
+    return HttpResponse(loader.get_template("zone_form.html").render({"action": "Create", "error": error}, request))
+
+def zone_edit(request: HttpRequest, zone_id: int):
+    zone = get_object_or_404(models.Zone, pk=zone_id)
+    error = None
+    if request.method == "POST":
+        name = request.POST.get("name", "").strip()
+        description = request.POST.get("description", "").strip()
+        if not name:
+            error = "Name is required."
+        elif models.Zone.objects.filter(name=name).exclude(pk=zone_id).exists():
+            error = "A zone with this name already exists."
+        else:
+            zone.name = name
+            zone.description = description
+            zone.save()
+            return HttpResponseRedirect(reverse("zone_list"))
+    return HttpResponse(loader.get_template("zone_form.html").render({"action": "Edit", "zone": zone, "error": error}, request))
+
+def zone_delete(request: HttpRequest, zone_id: int):
+    zone = get_object_or_404(models.Zone, pk=zone_id)
+    if request.method == "POST":
+        zone.delete()
+        return HttpResponseRedirect(reverse("zone_list"))
+    return HttpResponse(loader.get_template("zone_confirm_delete.html").render({"zone": zone}, request))
 
 
-    context = {
-        "devices": devices,
-        "error_msg": None,
-        "success_msg": None,
-        "sync_log": None,
-    }
+# ─── Device Registry Management ───────────────────────────────────────────────
+
+def device_registry_list(request: HttpRequest):
+    devices_qs = models.DeviceRegistry.objects.select_related("zone").all()
+    try:
+        from .biz import connection as biz_conn
+        with biz_conn.open() as c:
+            online = {d.device_id for d in c.get_all_online_devices()}
+    except Exception:
+        online = set()
+    return HttpResponse(loader.get_template("device_registry_list.html").render(
+        {"devices": devices_qs, "online_ids": online}, request))
+
+def device_registry_create(request: HttpRequest):
+    zones = models.Zone.objects.all()
+    error = None
+    if request.method == "POST":
+        sn = request.POST.get("serial_number", "").strip()
+        if not sn:
+            error = "Serial number is required."
+        elif models.DeviceRegistry.objects.filter(serial_number=sn).exists():
+            error = "A device with this serial number already exists."
+        else:
+            zone_id = request.POST.get("zone") or None
+            models.DeviceRegistry.objects.create(
+                serial_number=sn,
+                friendly_name=request.POST.get("friendly_name", "").strip(),
+                location=request.POST.get("location", "").strip(),
+                zone_id=zone_id,
+                interlock_enabled=bool(request.POST.get("interlock_enabled")),
+                is_active=True,
+            )
+            return HttpResponseRedirect(reverse("device_registry_list"))
+    return HttpResponse(loader.get_template("device_registry_form.html").render(
+        {"action": "Add", "zones": zones, "error": error}, request))
+
+def device_registry_edit(request: HttpRequest, device_id: int):
+    dev = get_object_or_404(models.DeviceRegistry, pk=device_id)
+    zones = models.Zone.objects.all()
+    error = None
+    if request.method == "POST":
+        dev.friendly_name = request.POST.get("friendly_name", "").strip()
+        dev.location = request.POST.get("location", "").strip()
+        zone_id = request.POST.get("zone") or None
+        dev.zone_id = zone_id
+        dev.is_active = bool(request.POST.get("is_active"))
+        dev.interlock_enabled = bool(request.POST.get("interlock_enabled"))
+        dev.save()
+        return HttpResponseRedirect(reverse("device_registry_list"))
+    return HttpResponse(loader.get_template("device_registry_form.html").render(
+        {"action": "Edit", "dev": dev, "zones": zones, "error": error}, request))
+
+def device_registry_delete(request: HttpRequest, device_id: int):
+    dev = get_object_or_404(models.DeviceRegistry, pk=device_id)
+    if request.method == "POST":
+        dev.delete()
+        return HttpResponseRedirect(reverse("device_registry_list"))
+    return HttpResponse(loader.get_template("device_registry_confirm_delete.html").render({"dev": dev}, request))
+
+def device_connection_logs(request: HttpRequest):
+    logs = models.DeviceConnectionLog.objects.all()[:200]
+    return HttpResponse(loader.get_template("device_connection_logs.html").render({"logs": logs}, request))
+
+
+# ─── Device Restart (dedicated) ───────────────────────────────────────────────
+
+def restart_device(request: HttpRequest, connection_id: int):
+    from .biz import lock_control as lc
+    model = lc.LockControlModel()
+    form = forms.LockControlForm({"mode": "Restart"})
+    form.is_valid()
+    lc.write_lock_control_mode(connection_id, form, model)
+    if model.error_msg:
+        return JsonResponse({"ok": False, "error": model.error_msg})
+    return JsonResponse({"ok": True})
+
+
+# ─── Sync Users (wired view) ──────────────────────────────────────────────────
+
+def sync_users_view(request: HttpRequest):
+    from .biz.sync_users_biz import get_devices_with_status, run_sync, run_sync_bidirectional
+    all_devices = []
+    try:
+        all_devices = get_devices_with_status()
+    except Exception:
+        pass
+
+    error_msg = None
+    success_msg = None
+    sync_log = None
 
     if request.method == "POST":
-        action = request.POST.get("action", "")
-
-        if action == "sync":
-            host_id = request.POST.get("host", "")
-            target_ids = request.POST.getlist("targets")
-
-            if not host_id:
-                context["error_msg"] = "Select a Host device."
-            elif not target_ids:
-                context["error_msg"] = "Select at least one Target device."
-            else:
-                # Remove host from targets if present
-                target_ids = [t for t in target_ids if t != host_id]
-                if not target_ids:
-                    context["error_msg"] = "Target must be different from Host."
-                else:
-                    context["sync_log"] = log
-                    context["success_msg"] = "Sync complete: " + host_id + " -> " + ", ".join(target_ids)
-
-    return HttpResponse(template.render(context, request))
-
-
-    from django.template import loader
-    from django.http import HttpResponse
-
-
-    context = {
-        "devices":     devices,
-        "error_msg":   None,
-        "success_msg": None,
-        "sync_log":    None,
-    }
-
-    if request.method == "POST" and request.POST.get("action") == "sync":
-        host_id    = request.POST.get("host", "").strip()
-        target_ids = [t.strip() for t in request.POST.getlist("targets") if t.strip()]
-
-        if not host_id:
-            context["error_msg"] = "Please select a Host device."
-        elif not target_ids:
-            context["error_msg"] = "Please select at least one Target device."
-        else:
-            # Ensure host is not in targets
-            target_ids = [t for t in target_ids if t != host_id]
-            if not target_ids:
-                context["error_msg"] = "Target must be different from Host."
-            else:
-                context["sync_log"]    = sync_log
-                context["success_msg"] = (
-                    f"Sync complete: {host_id} → {', '.join(target_ids)}"
-                )
-
-    return HttpResponse(template.render(context, request))
-
-
-    from django.template import loader
-    from django.http import HttpResponse
-
-
-    context = {
-        "devices":     devices,
-        "error_msg":   None,
-        "success_msg": None,
-        "sync_log":    None,
-    }
-
-    if request.method == "POST" and request.POST.get("action") == "sync":
-        host_id    = request.POST.get("host", "").strip()
-        target_ids = [t.strip() for t in request.POST.getlist("targets") if t.strip()]
-
-        if not host_id:
-            context["error_msg"] = "Please select a Host device."
-        elif not target_ids:
-            context["error_msg"] = "Please select at least one Target device."
-        else:
-            # Ensure host is not in targets
-            target_ids = [t for t in target_ids if t != host_id]
-            if not target_ids:
-                context["error_msg"] = "Target must be different from Host."
-            else:
-                context["sync_log"]    = sync_log
-                context["success_msg"] = (
-                    f"Sync complete: {host_id} → {', '.join(target_ids)}"
-                )
-
-    return HttpResponse(template.render(context, request))
-
-
-    from django.template import loader
-    from django.http import HttpResponse
-
-
-    context = {
-        "devices":     devices,
-        "error_msg":   None,
-        "success_msg": None,
-        "sync_log":    None,
-    }
-
-    if request.method == "POST" and request.POST.get("action") == "sync":
-        host_id    = request.POST.get("host", "").strip()
-        target_ids = [t.strip() for t in request.POST.getlist("targets") if t.strip()]
-
-        if not host_id:
-            context["error_msg"] = "Please select a Host device."
-        elif not target_ids:
-            context["error_msg"] = "Please select at least one Target device."
-        else:
-            # Ensure host is not in targets
-            target_ids = [t for t in target_ids if t != host_id]
-            if not target_ids:
-                context["error_msg"] = "Target must be different from Host."
-            else:
-                context["sync_log"]    = sync_log
-                context["success_msg"] = (
-                    f"Sync complete: {host_id} → {', '.join(target_ids)}"
-                )
-
-    return HttpResponse(template.render(context, request))
-
-
-    from django.template import loader
-    from django.http import HttpResponse
-
-
-    context = {
-        "devices":     devices,
-        "error_msg":   None,
-        "success_msg": None,
-        "sync_log":    None,
-    }
-
-    if request.method == "POST" and request.POST.get("action") == "sync":
-        mode       = request.POST.get("sync_mode", "merge").strip()
-        host_id    = request.POST.get("host", "").strip()
+        mode = request.POST.get("sync_mode", "merge").strip()
+        host_id = request.POST.get("host", "").strip()
         target_ids = [t.strip() for t in request.POST.getlist("targets") if t.strip()]
 
         if mode == "bidirectional":
-            if len(target_ids) < 2:
-                context["error_msg"] = "Select at least 2 devices for bidirectional merge."
+            all_ids = [t.strip() for t in request.POST.getlist("targets") if t.strip()]
+            if len(all_ids) < 2:
+                error_msg = "Select at least 2 devices for bidirectional merge."
             else:
-                context["sync_log"]    = sync_log
-                context["success_msg"] = "Bidirectional merge complete for: " + ", ".join(target_ids)
+                sync_log = run_sync_bidirectional(all_ids)
+                success_msg = "Bidirectional merge complete."
         else:
             mirror = (mode == "mirror")
             if not host_id:
-                context["error_msg"] = "Please select a Host device."
+                error_msg = "Please select a Host device."
             elif not target_ids:
-                context["error_msg"] = "Please select at least one Target device."
+                error_msg = "Please select at least one Target device."
             else:
                 target_ids = [t for t in target_ids if t != host_id]
                 if not target_ids:
-                    context["error_msg"] = "Target must be different from Host."
+                    error_msg = "Target must be different from Host."
                 else:
+                    sync_log = run_sync(host_id, target_ids, mirror=mirror)
                     mode_label = "Mirror" if mirror else "Merge"
-                    context["sync_log"]    = sync_log
-                    context["success_msg"] = f"{mode_label} complete: {host_id} → {', '.join(target_ids)}"
+                    success_msg = f"{mode_label} sync complete."
 
-    return HttpResponse(template.render(context, request))
+    return HttpResponse(loader.get_template("sync_users.html").render({
+        "devices":     all_devices,
+        "error_msg":   error_msg,
+        "success_msg": success_msg,
+        "sync_log":    sync_log,
+    }, request))
+
+
+def zone_sync_view(request: HttpRequest, zone_id: int):
+    from .biz.sync_users_biz import get_devices_with_status, run_sync_bidirectional
+    zone = get_object_or_404(models.Zone, pk=zone_id)
+    zone_serials = set(zone.devices.values_list("serial_number", flat=True))
+    error_msg = None
+    success_msg = None
+    sync_log = None
+
+    if request.method == "POST":
+        try:
+            all_online = get_devices_with_status()
+            zone_online_ids = [
+                str(getattr(d, "device_id", ""))
+                for d in all_online
+                if str(getattr(d, "device_id", "")) in zone_serials
+            ]
+            if len(zone_online_ids) < 2:
+                error_msg = "Need at least 2 online devices in this zone to sync."
+            else:
+                sync_log = run_sync_bidirectional(zone_online_ids)
+                success_msg = f"Zone '{zone.name}' sync complete."
+        except Exception as ex:
+            error_msg = str(ex)
+
+    return HttpResponse(loader.get_template("zone_sync.html").render({
+        "zone": zone,
+        "zone_serials": zone_serials,
+        "error_msg": error_msg,
+        "success_msg": success_msg,
+        "sync_log": sync_log,
+    }, request))
+
+
+# ─── Employee Management (auto-push to devices) ───────────────────────────────
+
+def employee_list(request: HttpRequest):
+    emps = models.Employee.objects.all().order_by("employee_id")
+    return HttpResponse(loader.get_template("employee_list.html").render({"employees": emps}, request))
+
+def employee_create(request: HttpRequest):
+    error = None
+    if request.method == "POST":
+        try:
+            emp_id = int(request.POST.get("employee_id", 0))
+        except ValueError:
+            error = "Employee ID must be a number."
+            emp_id = 0
+
+        if not error:
+            if models.Employee.objects.filter(employee_id=emp_id).exists():
+                error = "Employee with this ID already exists."
+            else:
+                period_start = request.POST.get("period_start") or None
+                period_end = request.POST.get("period_end") or None
+                emp = models.Employee.objects.create(
+                    employee_id=emp_id,
+                    name=request.POST.get("name", "").strip(),
+                    department=int(request.POST.get("department", 0) or 0),
+                    privilege=int(request.POST.get("privilege", 0) or 0),
+                    enabled=bool(request.POST.get("enabled")),
+                    card=request.POST.get("card", "").strip() or None,
+                    password=request.POST.get("password", "").strip() or None,
+                    period_start=period_start,
+                    period_end=period_end,
+                    timeset_1=int(request.POST.get("timeset_1", -1) or -1),
+                    timeset_2=int(request.POST.get("timeset_2", -1) or -1),
+                    timeset_3=int(request.POST.get("timeset_3", -1) or -1),
+                    timeset_4=int(request.POST.get("timeset_4", -1) or -1),
+                    timeset_5=int(request.POST.get("timeset_5", -1) or -1),
+                )
+                _push_employee_to_all_devices(emp)
+                return HttpResponseRedirect(reverse("employee_list"))
+
+    return HttpResponse(loader.get_template("employee_form.html").render({"action": "Add", "error": error}, request))
+
+def employee_edit(request: HttpRequest, employee_id: int):
+    emp = get_object_or_404(models.Employee, pk=employee_id)
+    error = None
+    if request.method == "POST":
+        emp.name = request.POST.get("name", "").strip()
+        emp.department = int(request.POST.get("department", 0) or 0)
+        emp.privilege = int(request.POST.get("privilege", 0) or 0)
+        emp.enabled = bool(request.POST.get("enabled"))
+        emp.card = request.POST.get("card", "").strip() or None
+        emp.password = request.POST.get("password", "").strip() or None
+        emp.period_start = request.POST.get("period_start") or None
+        emp.period_end = request.POST.get("period_end") or None
+        emp.timeset_1 = int(request.POST.get("timeset_1", -1) or -1)
+        emp.timeset_2 = int(request.POST.get("timeset_2", -1) or -1)
+        emp.timeset_3 = int(request.POST.get("timeset_3", -1) or -1)
+        emp.timeset_4 = int(request.POST.get("timeset_4", -1) or -1)
+        emp.timeset_5 = int(request.POST.get("timeset_5", -1) or -1)
+        emp.save()
+        _push_employee_to_all_devices(emp)
+        return HttpResponseRedirect(reverse("employee_list"))
+
+    return HttpResponse(loader.get_template("employee_form.html").render({"action": "Edit", "emp": emp, "error": error}, request))
+
+def employee_delete(request: HttpRequest, employee_id: int):
+    emp = get_object_or_404(models.Employee, pk=employee_id)
+    if request.method == "POST":
+        _delete_employee_from_all_devices(emp.employee_id)
+        emp.delete()
+        return HttpResponseRedirect(reverse("employee_list"))
+    return HttpResponse(loader.get_template("employee_confirm_delete.html").render({"emp": emp}, request))
+
+def employee_enable_disable(request: HttpRequest, employee_id: int):
+    emp = get_object_or_404(models.Employee, pk=employee_id)
+    emp.enabled = not emp.enabled
+    emp.save()
+    _push_employee_to_all_devices(emp)
+    return HttpResponseRedirect(reverse("employee_list"))
+
+def _push_employee_to_all_devices(emp: 'models.Employee'):
+    from .biz import connection as biz_conn
+    from .biz.sync_users_biz import _push_user
+    try:
+        with biz_conn.open() as c:
+            online = c.get_all_online_devices()
+            if not online:
+                return
+            user_dict = {
+                "name": emp.name,
+                "privilege": "Admin" if emp.privilege >= 1 else "User",
+                "enabled": "Yes" if emp.enabled else "No",
+                "department": str(emp.department),
+                "timeset1": str(emp.timeset_1),
+                "timeset2": str(emp.timeset_2),
+                "timeset3": str(emp.timeset_3),
+                "timeset4": str(emp.timeset_4),
+                "timeset5": str(emp.timeset_5),
+                "period_used": "Yes" if (emp.period_start and emp.period_end) else "No",
+                "period_start": str(emp.period_start) if emp.period_start else "",
+                "period_end": str(emp.period_end) if emp.period_end else "",
+                "card": emp.card or "",
+                "password": emp.password or "",
+                "qr": "",
+                "fingers": {},
+                "face": "",
+                "photo": "",
+                "photo_size": "",
+            }
+            for dev in online:
+                _push_user(c, dev.connection_id, str(emp.employee_id), user_dict, [])
+    except Exception:
+        pass
+
+def _delete_employee_from_all_devices(employee_id: int):
+    from .biz import connection as biz_conn
+    from .biz.sync_users_biz import _build_xml, _send_with_conn
+    try:
+        with biz_conn.open() as c:
+            online = c.get_all_online_devices()
+            for dev in online:
+                xml = _build_xml({"Request": "SetUserData", "UserID": str(employee_id), "Type": "Delete"})
+                _send_with_conn(c, dev.connection_id, xml, f"Delete EMP={employee_id}")
+    except Exception:
+        pass
+
+
+# ─── Bulk Log Download (CSV export) ──────────────────────────────────────────
+
+def download_logs_csv(request: HttpRequest):
+    from django.db.models import Q
+    start_time = request.GET.get("start")
+    end_time = request.GET.get("end")
+    device_id = request.GET.get("device_id", "")
+
+    query = models.AttendanceLog.objects.defer("photo")
+    if device_id:
+        query = query.filter(device_id=device_id)
+    if start_time:
+        query = query.filter(time__gte=start_time)
+    if end_time:
+        query = query.filter(time__lte=end_time)
+
+    def rows():
+        yield ",".join(["ID","Device","LogID","Time","UserID","AttendStatus","Action","AttendOnly","Expired"]) + "\n"
+        for log in query.iterator():
+            yield ",".join([
+                str(log.id),
+                str(log.device_id),
+                str(log.log_id),
+                str(log.time or ""),
+                str(log.user_id or ""),
+                str(log.attend_status or ""),
+                str(log.action or ""),
+                "Yes" if log.attend_only else "No",
+                "Yes" if log.expired else "No",
+            ]) + "\n"
+
+    response = StreamingHttpResponse(rows(), content_type="text/csv")
+    response["Content-Disposition"] = 'attachment; filename="attendance_logs.csv"'
+    return response
+
+def bulk_download_from_device(request: HttpRequest, connection_id: int):
+    """Download all logs from a device for a given date range and save to DB."""
+    from .biz import connection as biz_conn
+    from devicebroker.device_cmd.m50 import log as L
+    import datetime
+
+    error = None
+    saved_count = 0
+
+    if request.method == "POST":
+        start_str = request.POST.get("start_time", "").strip()
+        end_str = request.POST.get("end_time", "").strip()
+        try:
+            start_dt = datetime.datetime.fromisoformat(start_str) if start_str else None
+            end_dt = datetime.datetime.fromisoformat(end_str) if end_str else None
+        except ValueError:
+            error = "Invalid date format. Use YYYY-MM-DDTHH:MM"
+            start_dt = end_dt = None
+
+        if not error:
+            try:
+                with biz_conn.open() as c:
+                    dev = c.get_online_device(connection_id)
+                    device_id = dev.device_id if dev else ""
+
+                    resp = L.GetFirstGlogRequest(start_time=start_dt, end_time=end_dt).transact(c, connection_id)
+                    while resp.has_succeeded():
+                        log = resp.log
+                        models.AttendanceLog.objects.get_or_create(
+                            device_id=device_id,
+                            log_id=log.log_id,
+                            defaults={
+                                "time": log.time,
+                                "user_id": log.user_id,
+                                "timezone_offset": log.timezone_offset,
+                                "attend_status": str(log.attend_status) if log.attend_status else None,
+                                "action": str(log.action) if log.action else None,
+                                "job_code": log.job_code,
+                                "photo": log.photo,
+                                "body_temperature": log.body_temperature,
+                                "attend_only": log.attend_only,
+                                "expired": log.expired,
+                                "latitude": log.latitude,
+                                "longitude": log.longitude,
+                            }
+                        )
+                        saved_count += 1
+                        next_resp = L.GetNextGlogRequest(log.log_id + 1).transact(c, connection_id)
+                        resp = next_resp
+            except Exception as ex:
+                error = str(ex)
+
+    return HttpResponse(loader.get_template("bulk_download_logs.html").render({
+        "connection_id": connection_id,
+        "error": error,
+        "saved_count": saved_count,
+    }, request))
+
+
+# ─── External REST API ────────────────────────────────────────────────────────
+
+def _require_api_key(request: HttpRequest) -> Optional[models.APIKey]:
+    key_str = request.headers.get("X-API-Key", "") or request.GET.get("api_key", "")
+    if not key_str:
+        return None
+    try:
+        key = models.APIKey.objects.get(key=key_str, is_active=True)
+        key.last_used = timezone.now()
+        key.save(update_fields=["last_used"])
+        return key
+    except models.APIKey.DoesNotExist:
+        return None
+
+@csrf_exempt
+def api_employees(request: HttpRequest):
+    if not _require_api_key(request):
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+
+    if request.method == "GET":
+        emps = list(models.Employee.objects.values())
+        return JsonResponse({"employees": emps})
+
+    elif request.method == "POST":
+        data = json.loads(request.body)
+        try:
+            emp_id = int(data["employee_id"])
+        except (KeyError, ValueError):
+            return JsonResponse({"error": "employee_id required"}, status=400)
+        if models.Employee.objects.filter(employee_id=emp_id).exists():
+            return JsonResponse({"error": "Employee already exists"}, status=409)
+        emp = models.Employee.objects.create(
+            employee_id=emp_id,
+            name=data.get("name", ""),
+            department=int(data.get("department", 0)),
+            privilege=int(data.get("privilege", 0)),
+            enabled=data.get("enabled", True),
+            card=data.get("card") or None,
+            password=data.get("password") or None,
+            timeset_1=int(data.get("timeset_1", -1)),
+            timeset_2=int(data.get("timeset_2", -1)),
+            timeset_3=int(data.get("timeset_3", -1)),
+            timeset_4=int(data.get("timeset_4", -1)),
+            timeset_5=int(data.get("timeset_5", -1)),
+        )
+        _push_employee_to_all_devices(emp)
+        return JsonResponse({"id": emp.pk, "employee_id": emp.employee_id}, status=201)
+
+    return JsonResponse({"error": "Method not allowed"}, status=405)
+
+@csrf_exempt
+def api_employee_detail(request: HttpRequest, employee_id: int):
+    if not _require_api_key(request):
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+
+    try:
+        emp = models.Employee.objects.get(employee_id=employee_id)
+    except models.Employee.DoesNotExist:
+        return JsonResponse({"error": "Not found"}, status=404)
+
+    if request.method == "GET":
+        return JsonResponse({
+            "employee_id": emp.employee_id, "name": emp.name,
+            "department": emp.department, "privilege": emp.privilege,
+            "enabled": emp.enabled, "card": emp.card,
+        })
+
+    elif request.method in ("PUT", "PATCH"):
+        data = json.loads(request.body)
+        for field in ("name", "department", "privilege", "enabled", "card", "password",
+                      "timeset_1", "timeset_2", "timeset_3", "timeset_4", "timeset_5",
+                      "period_start", "period_end"):
+            if field in data:
+                setattr(emp, field, data[field])
+        emp.save()
+        _push_employee_to_all_devices(emp)
+        return JsonResponse({"ok": True})
+
+    elif request.method == "DELETE":
+        _delete_employee_from_all_devices(emp.employee_id)
+        emp.delete()
+        return JsonResponse({"ok": True})
+
+    return JsonResponse({"error": "Method not allowed"}, status=405)
+
+@csrf_exempt
+def api_logs(request: HttpRequest):
+    if not _require_api_key(request):
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+
+    from django.db.models import Q
+    query = models.AttendanceLog.objects.defer("photo")
+    if (device_id := request.GET.get("device_id")):
+        query = query.filter(device_id=device_id)
+    if (user_id := request.GET.get("user_id")):
+        query = query.filter(user_id=int(user_id))
+    if (start := request.GET.get("start")):
+        query = query.filter(time__gte=start)
+    if (end := request.GET.get("end")):
+        query = query.filter(time__lte=end)
+
+    logs = list(query.order_by("-id")[:500].values(
+        "id", "device_id", "log_id", "time", "user_id", "attend_status", "action", "attend_only", "expired"
+    ))
+    return JsonResponse({"logs": logs})
+
+@csrf_exempt
+def api_devices(request: HttpRequest):
+    if not _require_api_key(request):
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+
+    try:
+        from .biz import connection as biz_conn
+        with biz_conn.open() as c:
+            online = c.get_all_online_devices()
+        online_list = [{"connection_id": d.connection_id, "device_id": d.device_id,
+                        "terminal_type": d.attributes.get("terminal_type"),
+                        "product_name": d.attributes.get("product_name")} for d in online]
+    except Exception:
+        online_list = []
+    return JsonResponse({"devices": online_list})
+
+@csrf_exempt
+def api_trigger_sync(request: HttpRequest):
+    if not _require_api_key(request):
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+    if request.method != "POST":
+        return JsonResponse({"error": "POST required"}, status=405)
+
+    data = json.loads(request.body)
+    host = data.get("host")
+    targets = data.get("targets", [])
+    mode = data.get("mode", "merge")
+
+    from .biz.sync_users_biz import run_sync, run_sync_bidirectional
+    if mode == "bidirectional":
+        log = run_sync_bidirectional(targets)
+    else:
+        log = run_sync(host, targets, mirror=(mode == "mirror"))
+    return JsonResponse({"log": log})
+
+
+# ─── API Key Management UI ────────────────────────────────────────────────────
+
+def api_key_list(request: HttpRequest):
+    if request.method == "POST":
+        name = request.POST.get("name", "").strip()
+        if name:
+            models.APIKey.objects.create(name=name)
+        return HttpResponseRedirect(reverse("api_key_list"))
+    keys = models.APIKey.objects.all()
+    return HttpResponse(loader.get_template("api_key_list.html").render({"keys": keys}, request))
+
+def api_key_toggle(request: HttpRequest, key_id: int):
+    key = get_object_or_404(models.APIKey, pk=key_id)
+    key.is_active = not key.is_active
+    key.save()
+    return HttpResponseRedirect(reverse("api_key_list"))
+
+def api_key_delete(request: HttpRequest, key_id: int):
+    key = get_object_or_404(models.APIKey, pk=key_id)
+    if request.method == "POST":
+        key.delete()
+    return HttpResponseRedirect(reverse("api_key_list"))
+
+
+# ─── Interlock Management UI ──────────────────────────────────────────────────
+
+def interlock_status(request: HttpRequest):
+    states = models.InterlockState.objects.all().order_by("-punch_time")[:100]
+    devices_qs = models.DeviceRegistry.objects.all()
+    return HttpResponse(loader.get_template("interlock_status.html").render(
+        {"states": states, "devices": devices_qs}, request))
+
+def interlock_toggle_device(request: HttpRequest, device_id: int):
+    dev = get_object_or_404(models.DeviceRegistry, pk=device_id)
+    dev.interlock_enabled = not dev.interlock_enabled
+    dev.save()
+    return HttpResponseRedirect(reverse("interlock_status"))

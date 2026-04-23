@@ -1,0 +1,10 @@
+{% extends "master.html" %}
+{% block title %}Delete Employee{% endblock %}
+{% block content %}
+<h2>Delete Employee: {{ emp.name }} (ID: {{ emp.employee_id }})</h2>
+<div class="alert alert-warning">This will delete the employee from the software AND from all connected devices.</div>
+<form method="post">{% csrf_token %}
+    <button type="submit" class="btn btn-danger">Delete from Software & All Devices</button>
+    <a href="{% url 'employee_list' %}" class="btn btn-secondary ms-2">Cancel</a>
+</form>
+{% endblock %}

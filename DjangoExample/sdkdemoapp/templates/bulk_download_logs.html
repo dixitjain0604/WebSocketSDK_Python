@@ -1,0 +1,28 @@
+{% extends "master.html" %}
+{% block title %}Bulk Download Logs{% endblock %}
+{% block content %}
+{% include 'navbar_control_device.html' %}
+<h2 class="mt-3">Bulk Download Logs from Device</h2>
+<p class="text-muted">Download all attendance logs in a date range from the device and save to the local database.</p>
+
+{% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+{% if saved_count > 0 %}<div class="alert alert-success">Saved {{ saved_count }} log(s) to the database.</div>{% endif %}
+
+<form method="post">
+    {% csrf_token %}
+    <div class="row">
+        <div class="col-md-5 mb-3">
+            <label class="form-label">Start Date/Time</label>
+            <input type="datetime-local" name="start_time" class="form-control">
+        </div>
+        <div class="col-md-5 mb-3">
+            <label class="form-label">End Date/Time</label>
+            <input type="datetime-local" name="end_time" class="form-control">
+        </div>
+        <div class="col-md-2 mb-3 d-flex align-items-end">
+            <button type="submit" class="btn btn-primary w-100">Download</button>
+        </div>
+    </div>
+    <p class="text-muted">Leave blank to download all logs from device. After download, view logs in <a href="{% url 'search_attend_logs' %}">Attendance Logs</a> or <a href="{% url 'download_logs_csv' %}">Export CSV</a>.</p>
+</form>
+{% endblock %}

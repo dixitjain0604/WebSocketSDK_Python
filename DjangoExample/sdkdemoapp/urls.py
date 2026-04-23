@@ -65,4 +65,52 @@ urlpatterns = [
     path("device/check_registration", views.check_device_registration, name = "check_device_registration"),
     path("device/check_login", views.check_device_login, name = "check_device_login"),
     path("device/upload_log", views.upload_device_log, name = "upload_device_log"),
+    path("device/connection_event", views.connection_event, name = "connection_event"),
+
+    # Zone management
+    path("zones/", views.zone_list, name="zone_list"),
+    path("zones/create/", views.zone_create, name="zone_create"),
+    path("zones/<int:zone_id>/edit/", views.zone_edit, name="zone_edit"),
+    path("zones/<int:zone_id>/delete/", views.zone_delete, name="zone_delete"),
+    path("zones/<int:zone_id>/sync/", views.zone_sync_view, name="zone_sync"),
+
+    # Device registry
+    path("device_registry/", views.device_registry_list, name="device_registry_list"),
+    path("device_registry/create/", views.device_registry_create, name="device_registry_create"),
+    path("device_registry/<int:device_id>/edit/", views.device_registry_edit, name="device_registry_edit"),
+    path("device_registry/<int:device_id>/delete/", views.device_registry_delete, name="device_registry_delete"),
+    path("device_connection_logs/", views.device_connection_logs, name="device_connection_logs"),
+
+    # Per-device: restart & bulk log download
+    path("control_device/<int:connection_id>/restart/", views.restart_device, name="restart_device"),
+    path("control_device/<int:connection_id>/bulk_download_logs/", views.bulk_download_from_device, name="bulk_download_logs"),
+
+    # Sync users (all devices or zone-wise)
+    path("sync_users/", views.sync_users_view, name="sync_users"),
+
+    # Employee management (with auto-push)
+    path("employees/", views.employee_list, name="employee_list"),
+    path("employees/create/", views.employee_create, name="employee_create"),
+    path("employees/<int:employee_id>/edit/", views.employee_edit, name="employee_edit"),
+    path("employees/<int:employee_id>/delete/", views.employee_delete, name="employee_delete"),
+    path("employees/<int:employee_id>/toggle/", views.employee_enable_disable, name="employee_enable_disable"),
+
+    # Log export
+    path("logs/download_csv/", views.download_logs_csv, name="download_logs_csv"),
+
+    # Interlock
+    path("interlock/", views.interlock_status, name="interlock_status"),
+    path("interlock/<int:device_id>/toggle/", views.interlock_toggle_device, name="interlock_toggle_device"),
+
+    # API key management
+    path("api_keys/", views.api_key_list, name="api_key_list"),
+    path("api_keys/<int:key_id>/toggle/", views.api_key_toggle, name="api_key_toggle"),
+    path("api_keys/<int:key_id>/delete/", views.api_key_delete, name="api_key_delete"),
+
+    # External REST API
+    path("api/v1/employees/", views.api_employees, name="api_employees"),
+    path("api/v1/employees/<int:employee_id>/", views.api_employee_detail, name="api_employee_detail"),
+    path("api/v1/logs/", views.api_logs, name="api_logs"),
+    path("api/v1/devices/", views.api_devices, name="api_devices"),
+    path("api/v1/sync/", views.api_trigger_sync, name="api_trigger_sync"),
 ]

@@ -1,0 +1,19 @@
+{% extends "master.html" %}
+{% block title %}{{ action }} Zone{% endblock %}
+{% block content %}
+<h2>{{ action }} Zone</h2>
+{% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+<form method="post">
+    {% csrf_token %}
+    <div class="mb-3">
+        <label class="form-label">Name *</label>
+        <input type="text" name="name" class="form-control" value="{{ zone.name|default:'' }}" required>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Description</label>
+        <textarea name="description" class="form-control">{{ zone.description|default:'' }}</textarea>
+    </div>
+    <button type="submit" class="btn btn-primary">Save</button>
+    <a href="{% url 'zone_list' %}" class="btn btn-secondary ms-2">Cancel</a>
+</form>
+{% endblock %}

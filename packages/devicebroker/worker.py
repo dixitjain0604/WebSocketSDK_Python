@@ -37,6 +37,7 @@ class Worker:
         self.connection         = conn
         self.webapp_url         = webapp_url
         self.device_logged_in   = dict()
+        self.client_to_device   = dict()
 
     @classmethod
     def run(cls, conn : mpc.Connection, webapp_url : str):
@@ -49,10 +50,27 @@ class Worker:
     def process_command(self, cmd : int, args : tuple):
         if cmd == commands.CLIENT_CONNECTED:
             client_id, = args
+            LOG.info(f"Client {client_id} connected")
 
         elif cmd == commands.CLIENT_DISCONNECTED:
             client_id, = args
+            device_id = None
+            for did, logged_in in list(self.device_logged_in.items()):
+                if did == client_id:
+                    device_id = did
+                    break
+            if client_id in self.device_logged_in:
+                device_id = self.client_to_device.get(client_id)
+                try:
+                    requests.post(self.webapp_url + "/device/connection_event", json={
+                        "client_id": client_id,
+                        "device_id": device_id or "",
+                        "event": "disconnect"
+                    }, timeout=3)
+                except Exception:
+                    pass
             self.device_logged_in.pop(client_id, None)
+            self.client_to_device.pop(client_id, None)
 
         elif cmd == commands.MESSAGE_FROM_CLIENT:
             try:
@@ -149,6 +167,7 @@ class Worker:
 
         if succeeded:
             self.device_logged_in[client_id] = True
+            self.client_to_device[client_id] = sn
             self.connection.send((
                 commands.ASSIGN_DEVICE_ID,
                 client_id,
@@ -157,16 +176,36 @@ class Worker:
                     "terminal_type" : terminal_type,
                     "product_name"  : product_name,
                 } ))
+            try:
+                requests.post(self.webapp_url + "/device/connection_event", json={
+                    "client_id": client_id,
+                    "device_id": sn,
+                    "event": "connect",
+                    "terminal_type": terminal_type,
+                    "product_name": product_name,
+                }, timeout=3)
+            except Exception:
+                pass
 
     def process_log(self, client_id : int, log_type : str, parsed_msg : ElementTree.Element):
         data = {}
         for child in parsed_msg:
             data[child.tag] = child.text
 
+        device_id = self.client_to_device.get(client_id, "")
+        data["_device_id"] = device_id
+        data["_client_id"] = client_id
+
         upload_res = requests.post(self.webapp_url + f"/device/upload_log?type={log_type}", json = data)
         succeeded : bool = False
         if upload_res.status_code == requests.codes.ok:
             succeeded = True
+            if log_type in ("TimeLog", "TimeLog_v2") and upload_res.json().get("interlock_devices"):
+                for deny_client_id in upload_res.json()["interlock_devices"]:
+                    try:
+                        self._disable_user_on_device(deny_client_id, data.get("UserID", ""))
+                    except Exception as ex:
+                        LOG.warning(f"Interlock error for client {deny_client_id}: {ex}")
 
         response = ElementTree.Element(xml_consts.TAG_MESSAGE)
         response.append(create_text_element(xml_consts.TAG_RESPONSE, log_type))
@@ -179,6 +218,24 @@ class Worker:
             client_id,
             ElementTree.tostring(response, encoding = "unicode") ))
     
+    def _disable_user_on_device(self, client_id : int, user_id : str):
+        """Send a deny-access command by disabling user on a specific device client."""
+        from xml.etree import ElementTree as ET
+        msg = ET.Element("Message")
+        req = ET.SubElement(msg, "Request")
+        req.text = "SetUserData"
+        uid_el = ET.SubElement(msg, "UserID")
+        uid_el.text = str(user_id)
+        type_el = ET.SubElement(msg, "Type")
+        type_el.text = "Set"
+        en_el = ET.SubElement(msg, "Enabled")
+        en_el.text = "No"
+        self.connection.send((
+            commands.SEND_MESSAGE_TO_CLIENT,
+            client_id,
+            ET.tostring(msg, encoding="unicode")
+        ))
+
     def process_keepalive(self, client_id : int, parsed_msg : ElementTree.Element):
         response = ElementTree.Element(xml_consts.TAG_MESSAGE)
         response.append(create_text_element(xml_consts.TAG_RESPONSE, "KeepAlive"))
